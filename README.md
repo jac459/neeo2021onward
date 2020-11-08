@@ -87,5 +87,24 @@ A. No, you can also run it on additional hardware yourself, like a Raspberry Pi.
 Q. Can I run the rooted Brain on a virtualised system?
 A. This should be possible, but hasn't really been pursued. Current experience shows no benefit of such a (more powerful) solution: custom drivers work very well on the Brain's rooted hardware.
   
-  
-  
+Q. Can I replace the battery of my remote?
+A. Yes you can. It is a standard LiPo battery with specifications: 3 leads 3.7V 1000Mah 383759 (the latter being the dimensions). 
+The only problem that you might have, is that the NEEO-remote has a connector and that most batteries only come with 3 leads, requiring some soldering.
+
+Q. What means "A custom device driver"? 
+A. You need a driver for each type of device you want to control by your NEEO remote. The NEEO-company developed drivers for many devices and you copuld ask them to support additional ones.
+When the NEEO-company was purchased by Control4, development was more or less halted, so officially, you cannot control equipment that wasn't developed by NEEO.
+However, it IS possible to add support for a device through code that wasn't provided by the NEEO-company, these are known as"Custom device drivers".
+
+Q. I do not want a driver, I want my NEEO just to support a piece of equipment!
+A. Every piece of equipment that is controlled by you NEEO remote needs a driver, to "drive that type of equipment".  
+
+Q. What's the talk about "the NEW C4-remote versus the classic NEEO? They are both NEEO, right?
+A. When Control4 bought the NEEO-company, they stated that the N˜EEO-remote that came from NEEO (we call it the classic NEEO Remote) would no longer be sold.
+Shortly after that, Control4 announced "their NEEO remote", which is often called NEEO-C4, NEEO-Control4 or YIO. It's a totally different device.
+
+Q. Should I forget about my NEEOremote and buy a C4-NEEO (YIO)?
+A. You could, but the YIO is much more expensive and has a totally locked down firmware. If you want additional equipment to be supported, it has top be developed by Control4 which cost a lot of money again.
+
+Q. Can we reflash the Brain and Remote so that it will become "the new C4-NEEO"?
+A. Probably not. Control4 probably uses (slightly) different hardware. It was never the intention of this community to convert the classic NEEO-remote to a C4 as this would probably violate Control4-copyrights.    
