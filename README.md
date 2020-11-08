@@ -90,15 +90,15 @@ A. This should be possible, but hasn't really been pursued. Current experience s
 Q. Can I replace the battery of my remote?
 A. Yes you can. A perfect, but expensive replacement is this one: http://www.honcell.com/products/models/id/2043.html. 
 But, since this is a standard LiPo battery with specifications: 3 leads 3.7V 1000Mah 383759 (the latter being the dimensions), you can find similar batteries on ebay and aliexpress (just use the specifications to search for). 
-The only problem that you might have when buying them, is that the NEEO-remote has a battery-connector and that most batteries only come with 3 leads, requiring some soldering.
+The only problem you might have when buying them, is that the NEEO-remote has a battery-connector and that most batteries only come with 3 leads, requiring some soldering.
 
 Q. What means "A custom device driver"? 
 A. You need a driver for each type of device you want to control by your NEEO remote. The NEEO-company developed drivers for many devices and you copuld ask them to support additional ones.
 When the NEEO-company was purchased by Control4, development was more or less halted, so officially, you cannot control equipment that wasn't developed by NEEO.
-However, it IS possible to add support for a device through code that wasn't provided by the NEEO-company, these are known as"Custom device drivers".
+However, it IS possible to add support for a device through code making a driver that wasn't provided by the NEEO-company, these are known as "Custom device drivers".
 
 Q. I do not want a driver, I want my NEEO just to support a piece of equipment!
-A. Every piece of equipment that is controlled by you NEEO remote needs a driver, to "drive that type of equipment".  
+A. Every piece of equipment that is controlled by your NEEO remote needs a driver, to "drive that type of device/equipment".  
 
 Q. What's the talk about "the NEW C4-remote versus the classic NEEO? They are both NEEO, right?
 A. When Control4 bought the NEEO-company, they stated that the N˜EEO-remote that came from NEEO (we call it the classic NEEO Remote) would no longer be sold.
