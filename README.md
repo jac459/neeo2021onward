@@ -1,7 +1,7 @@
 README.MD
 
-NOTE!!!!!!!! WORK IN PROGRESS, THE CONTENT WAS INITIALLY DEFINED BUT NJOT REVIEWEED YET !!!!!!!!!!!!!!!!!!!!NOTE
-USE AT YOUR OWN RISK AT THIS MOMEN˜T
+NOTE!!!!!!!! WORK IN PROGRESS, THE CONTENT WAS INITIALLY DEFINED BUT NOT REVIEWED YET !!!!!!!!!!!!!!!!!!!!NOTE
+USE AT YOUR OWN RISK AT THIS MOMENT
 
 This READM file describes the work that has been done by the Telegram community "FindingNEEO" which has one global objective:
 Make certain that the original NEEO-remote is still useable after NEEO/C4 shuts down their cloud-infrastructure.
