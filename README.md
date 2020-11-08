@@ -88,8 +88,9 @@ Q. Can I run the rooted Brain on a virtualised system?
 A. This should be possible, but hasn't really been pursued. Current experience shows no benefit of such a (more powerful) solution: custom drivers work very well on the Brain's rooted hardware.
   
 Q. Can I replace the battery of my remote?
-A. Yes you can. It is a standard LiPo battery with specifications: 3 leads 3.7V 1000Mah 383759 (the latter being the dimensions). 
-The only problem that you might have, is that the NEEO-remote has a connector and that most batteries only come with 3 leads, requiring some soldering.
+A. Yes you can. A perfect, but expensive replacement is this one: http://www.honcell.com/products/models/id/2043.html. 
+But, since this is a standard LiPo battery with specifications: 3 leads 3.7V 1000Mah 383759 (the latter being the dimensions), you can find similar batteries on ebay and aliexpress (just use the specifications to search for). 
+The only problem that you might have when buying them, is that the NEEO-remote has a battery-connector and that most batteries only come with 3 leads, requiring some soldering.
 
 Q. What means "A custom device driver"? 
 A. You need a driver for each type of device you want to control by your NEEO remote. The NEEO-company developed drivers for many devices and you copuld ask them to support additional ones.
