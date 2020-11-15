@@ -14,20 +14,39 @@ import tempfile
 #import zlib
 #import shutil
 #from urllib2 import Request
-#import requests
+import requests
 
 InstalledCheckingVersion = 10
 InstalledAndOK = 0
 InstalledButNotOK = 90
 NotInstalled = 99
-MyPackages =  ["git","nodejs","npm"]
-MyPackageVersion =  ("2.20.1","10.21.0 ","5.8.0","0")
-MyPackageStatus =  [NotInstalled,NotInstalled,NotInstalled,NotInstalled]
-MyPackageInstalled = ["","","",""]
+PackageTypeUnknown = 0
+PackageTypeAPT = 1
+PackageTypeManual = 2
+MyPackages =  [{"name":"git","type": "","versionreq": "2.20.1","status":NotInstalled,"installedversion":"","commandline":"git --version","phaserequired":0},
+              {"name":"nodejs","type": "","versionreq": "10.21.0","status":NotInstalled,"installedversion":"", "commandline": "nodejs --version","phaserequired":0},
+              {"name":"npm","type": "","versionreq": "5.8.0","status":NotInstalled,"installedversion":"", "commandline": "npm --version","phaserequired":0},
+              {"name":"nodered","type": "","versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1},
+              {"name":"mosquitto","type": "","versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1},
+              ]
+#MyPackages =  [{"name":"git","type": "","versionreq": "2.20.1","status":NotInstalled,"installedversion":"","commandline":"git --version","phaserequired":0},
+#              {"name":"nodejs","type": "","versionreq": "10.21.0","status":NotInstalled,"installedversion":"", "commandline": "nodejs --version","phaserequired":0},
+#              {"name":"npm","type": "","versionreq": "5.8.0","status":NotInstalled,"installedversion":"", "commandline": "npm --version","phaserequired":0},
+#              {"name":"nodered","type": "","versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1},
+#              {"name":"mosquitto","type": "","versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1},
+#              ]
+#MyPackagesx =  ["git","nodejs","npm","nodered"]
+#MyModules =  ["git --vesion","nodejs --version","npm --version","node-red --version"]
+#MyPackageType = [PackageTypeUnknown,PackageTypeUnknown,PackageTypeUnknown,PackageTypeUnknown]
+#MyPackageVersion =  ("2.20.1","10.21.0 ","5.8.0","0","1.0.6")
+#MyPackageStatus =  [NotInstalled,NotInstalled,NotInstalled,NotInstalled,NotInstalled]
+#MyPackageInstalled = ["","","","",""]
 InstalledCheckingVersion = 10
+PKGNPMIndex = -1
+PKGNodeRedIndex = -1
 InstalledAndOk = 0
-#AllDepsOK  = False
-#DidAPTUpdate = False
+BuildMetaPhase = 0
+BuildNodeRedORMQTTPhase = -1
 
 #===============================================================================
 # Define various  functions
@@ -54,51 +73,88 @@ def CheckPackageInstalled(ThisPackage):
     PackageCache.close()
 
 
-def TestPackages_OK():
+def TestPackages_OK(Phase):
     global AllDepsOK
+    global CheckedDependenciesAlready
+
+    CheckedDependenciesAlready = True
     AllDepsOK = True
     MyIndex = 0
-    for ThisPackage in MyPackages: 
-       Installed = CheckPackageInstalled(ThisPackage)
+    #"name":"git","type": "","versionreq": "2.20.1","status":0,"installedversion":"","commandline":"git --version","phaserequired":0}
+    for pkg in MyPackages:
+       if pkg['name']  == "npm": 
+          PKGNPMIndex =  MyIndex
+       elif pkg['name']  == "nodered": 
+         PKGNodeRedIndex = MyIndex
+
+       Installed = CheckPackageInstalled(pkg['name'])
        if Installed != "":
-          MyPackageStatus[MyIndex] = InstalledCheckingVersion		#Signal package is installed
+          pkg['status'] = InstalledCheckingVersion		#Signal package is installed
           VersionOnly = re.match(r'^[0-9.:]*',Installed)
           i = VersionOnly[0].find(':') 
           if i != -1:
               Installed=VersionOnly[0][i+1:]
           else:
-              Installed=VersionOnly[0]
-          MyPackageInstalled[MyIndex] = Installed.strip() 
-          if  MyPackageInstalled[MyIndex] < MyPackageVersion[MyIndex].strip():
-              MyPackageStatus[MyIndex] = InstalledButNotOK                #Signal package is installed, but version is too low
-              AllDepsOK = False
+               Installed=VersionOnly[0]
+          pkg['installedversion'] = Installed.strip() 
+          if  pkg['installedversion'] < pkg['versionreq'].strip():
+              pkg['status'] = InstalledButNotOK                #Signal package is installed, but version is too low
+              if pkg['return AllDepsOK'] <= Phase:
+                 AllDepsOK = False
           else:
-              MyPackageStatus[MyIndex] = InstalledAndOK                   #Signal package is installed with correct version
+              pkg['status'] = InstalledAndOK                   #Signal package is installed with correct version
        else:
               AllDepsOK = False
        MyIndex = MyIndex +1
+
+    #if AllDepsOK == False:
+    #   if MyPackages[PKGNPMIndex].['status'] != InstalledAndOK:    # problems with npm package?  
+
+    print("Leaving dep part, status = ",AllDepsOK)
     return AllDepsOK
 
+def CheckDependencies(Phase):
+    print("Now we check to see if all dependencies for a certain phase are fulfilled") 
+    AllPAckagesForThisPhaseAreOK = True
+    for pkg in MyPackages:
+       if pkg['phaserequired']  <= Phase:
+          if pkg['status']  !=  InstalledAndOK:
+             AllPAckagesForThisPhaseAreOK = False
+
+    print("Result:",AllPAckagesForThisPhaseAreOK)
+    return AllPAckagesForThisPhaseAreOK
 
 def DisplayPrimaryMenu():
+    global CheckedDependenciesAlready
+    global AllDepsOK
     WT_HEIGHT =  20
     WT_WIDTH  = 40
     WT_MENU_HEIGHT = 12
 
     DoWhip = "whiptail --title 'Raspberry pi configurator for NEEO' --menu 'Setup Options' 30 70 20 " + \
-             " --cancel-button Finish --ok-button Select " \
-             "'0 Preferences' 'Display/change user preferences' "
-    if AllDepsOK:         
-       DoWhip += "'1 Check' 'All dependencies are Okay' "        
+             " --cancel-button Finish --ok-button Select "
+    if CheckedDependenciesAlready == False:
+       DoWhip += "'1 Check' 'Check dependencies'    \
+             '7 Simple' 'Simply install all of the above'  \
+             'P Preferences' 'Display/change user preferences'  \
+             'X Exit' 'Exit the program'  2>" + LogDir + "/Mainmenu.txt"
+    elif  AllDepsOK == False:
+       DoWhip += "'1 Check' 'Check dependencies'   \
+             '2 Install dep' 'Install the required dependencies' \
+             '4 Install Mosquito' 'Install and setup Mosquito' \
+             '5 Install NodeRed' 'Install and setup NodeRed' \
+             '7 Simple' 'Simply install all of the above'  \
+             'P Preferences' 'Display/change user preferences'  \
+             'X Exit' 'Exit the program'  2>" + LogDir + "/Mainmenu.txt"
     else:
-       DoWhip += "'1 Check' 'Check dependencies' " 
-    DoWhip += "'2 Install dep' 'Install the required dependencies' \
+       DoWhip += "'1 Check' 'All dependencies are Okay'        \
              '3 Install Metadriver' 'Install and setup Metadriver' \
              '4 Install Mosquito' 'Install and setup Mosquito' \
              '5 Install NodeRed' 'Install and setup NodeRed' \
              '6 Refresh Activated' 'Refresh files in Activated & deactivated folders'  \
              '7 Simple' 'Simply install all of the above'  \
-             '9 Exit' 'Exit the program'  2>" + LogDir + "/Mainmenu.txt" 
+             'P Preferences' 'Display/change user preferences'  \
+             'X Exit' 'Exit the program'  2>" + LogDir + "/Mainmenu.txt"
     Response = subprocess.call(DoWhip,shell=True)
     if Response == 0:
        fp =  open(LogDir + '/Mainmenu.txt')
@@ -107,19 +163,21 @@ def DisplayPrimaryMenu():
        return  Choice
     else:
        print("User cancelled the dialog")
-       return -99
+       return "@"  # signal somethiong is wrong with the main menu
 
 def ShowPackageStatus():
 
     DoWhip = "whiptail --title 'Overview status of dependencies'  --msgbox "
     MyIndex = 0
-    for ThisPackage in MyPackages:
-       Content = "' Required: " + MyPackages[MyIndex] + " " + MyPackageVersion[MyIndex]   +  " "
+    #"name":"git","type": "","versionreq": "2.20.1","status":0,"installedversion":"","commandline":"git --version","phaserequired":0}
+    for pkg in MyPackages:
+       print(pkg) 
+       Content = "' Required: " + pkg['name'] + " " + pkg['versionreq']   +  " "
        Content = Content.ljust(35, ' ')
-       if  MyPackageStatus[MyIndex] == InstalledAndOK:
-           Content += "Found:  "+ MyPackageInstalled [MyIndex] + " --> OK\n'"
-       elif  MyPackageStatus[MyIndex] == InstalledButNotOK:
-           Content += "Found:  " + MyPackageInstalled [MyIndex] + " --> Version is too low\n'"
+       if  pkg['status']  == InstalledAndOK:
+           Content += "Found:  "+ pkg['installedversion']  + " --> OK\n'"
+       elif  pkg['status'] == InstalledButNotOK:
+           Content += "Found:  " + pkg['installedversion'] + " --> Version is too low\n'"
        else:
            Content +=  "Not found --> Need to install\n'"
        MyIndex += 1
@@ -172,9 +230,9 @@ def SelectPackageToInstall():
 
     DoWhip = "whiptail --title 'Install dependencies'   --checklist  'Select packages you want to be installed'  25 78 4 "
     MyIndex = 0
-    for ThisPackage in MyPackages:
-       if  MyPackageStatus[MyIndex] != InstalledAndOK:
-           Content = "'"+ MyPackages[MyIndex] + "' '" + MyPackages[MyIndex] + " " + MyPackageVersion[MyIndex]   +  "' "
+    for pkg in MyPackages:
+       if  pkg['status']  != InstalledAndOK:
+           Content = "'"+ pkg['name'] + "' '" + pkg['name'] + " " + pkg['versionreq']  +  "' "
            Content = Content.ljust(35, ' ') + "ON "
            DoWhip +=  Content 
        MyIndex += 1
@@ -186,55 +244,55 @@ def SelectPackageToInstall():
        fp.close()
        return Choice
 
-def as_unix_user(uid, gid=None):  # optional group
-    def wrapper(func):
-        def wrapped(*args, **kwargs):
-            pid = os.fork()
-            if pid == 0:  # we're in the forked process
-                if gid is not None:  # GID change requested as well
-                    os.setgid(gid)
-                os.setuid(uid)  # set the UID for the code within the `with` block
-                func(*args, **kwargs)  # execute the function
-                os._exit(0)  # exit the child process
-        return wrapped
-    return wrapper
-
 def Do_Check_dependencies():
-    if TestPackages_OK() != True:
+    if TestPackages_OK(0) != True:
        ShowPackageStatus()
+
 def Do_PreferencesMenu():
     print("We are going to setup some preferences") 
+
 def HandleChoice(i):
     switcher = {
-            0: lambda: Do_PreferencesMenu(),
-            1: lambda: Do_Check_dependencies(),
-            2: lambda: Do_Install_dependencies(),
-            3: lambda: Do_Install_Meta(),
-            4: lambda: Do_Install_Mosquito(),
-            5: lambda: Do_Install_NodeRed(),
-            6: lambda: Do_Refresh_NEEOCustom(),
-            7: lambda: Do_It_All(),
-            9: lambda: Do_Exit(),
+            "1": lambda: Do_Check_dependencies(),
+            "2": lambda: Do_Install_dependencies(),
+            "3": lambda: Do_Install_Meta(),
+            "4": lambda: Do_Install_Mosquito(),
+            "5": lambda: Do_Install_NodeRed(),
+            "6": lambda: Do_Refresh_NEEOCustom(),
+            "7": lambda: Do_It_All(),
+            "p": lambda: Do_PreferencesMenu(),
+            "P": lambda: Do_PreferencesMenu(),
+            "x": lambda: Do_Exit(),
+            "X": lambda: Do_Exit()
         }
-    func = switcher.get(int(i[0]), lambda: 'Invalid')
+    func = switcher.get(i[0], lambda: 'Invalid')
     func()
-    
-    # Main menu looks like this:
-    #DoWhip += "'1 Check' 'Check dependencies' " 
-    #DoWhip += "'2 Install dep' 'Install the required dependencies' \
-    #         '3 Install Metadriver' 'Install and setup Metadriver' \
-    #         '4 Install Mosquito' 'Install and setup Mosquito' \
-    #         '5 Install NodeRed' 'Install and setup NodeRed' \
-    #         '6 Refresh Activated' 'Refresh files in Activated & deactivated folders'  \
-    #         '7 Simple' 'Simply install all of the aboveo'  \
-    #         '9 Exit' 'Exit the program'  2>" + LogDir + "/BackgroundOutput.txt" 
-
 
 def Do_Install_Mosquito():
-    Print("Now we install Mosquito.")
+    print("Derpendencies for  Mosquito okay?")
+    if CheckDependencies(BuildNodeRedORMQTTPhase): 
+        print("Now we install NodeRed.")
+        print("This will taske some time, please let this process continiue....")
+        InstallPackage("mosquito") 
 
 def Do_Install_NodeRed(): 
-    Print("Now we install NodeRed.")
+
+    if CheckDependencies(BuildNodeRedORMQTTPhase) != True:    # are all dependencies for thjis phase fulfilled?
+       print("Not all dependecies for NodeRed are fulfilled")
+       return
+    print("Now we install NodeRed.")
+    print("This will taske some time, please let this process continiue....")
+    InstallPackage("nodered") 
+    return
+    DONodeRedStart = "systemctl enable nodered.service"
+    print(DONodeRedStart)
+    Response = subprocess.call(DONodeRedStart)
+    if Response == 0:
+       print("That's it, NodeRed is installed and configured")
+    else:
+       print("Fatal error ocurred while installing NodeRed")
+       sys.exit(12)
+
 def Do_Refresh_NEEOCustom():
      print("We need to refresh 'Activated'and 'Deactivated' directories") 
      # save the non-volatile directories 
@@ -258,15 +316,10 @@ def Do_Install_Meta(): # Install Metadriver
     if AllDepsOK != True:
        DoWhip = "whiptail --title 'Example Dialog' --msgbox 'Not all dependencies are fullfilled, please run function 1 and 2 first.' 8 78"
        subprocess.call(DoWhip,shell=True)
-       #print("Cannot continue, not all dependencies are fulfilled")
        return 12
 
     if os.path.isdir(InstallDir) == False:
-       #print("Creating meta directory in ",OriginalHomeDir)
-       #os.mkdir(InstallDir, 0o755)
-       #os.chown(InstallDir,int(OriginalUID),int(OriginalGID) )
        DoMKDirCMD = "su -m "+ OriginalUsername + " -c 'mkdir  "  + '"' + InstallDir + '"' + " 2>"+ LogDir + "/BackgroundMkdir.txt'"
-       print(DoMKDirCMD)
        Response = subprocess.call(DoMKDirCMD,shell=True)
        if Response == 0:
           fp =  open(LogDir + '/BackgroundMkdir.txt')
@@ -277,8 +330,8 @@ def Do_Install_Meta(): # Install Metadriver
           print("Fatal error ocurred  when creating directopry for  metadriver: ",InstallDir)
           sys.exit(12)
 
-    DoNPMCMD = "su -m "+ OriginalUsername + " -c 'export HOME="+OriginalHomeDir + "&& npm install --prefix " + '"' + InstallDir + '"' + "    jac459/metadriver 2>" + LogDir + "/BackgroundNPMMeta.txt'"
-    Response = subprocess.call(DoNPMCMD,shell=True)
+    DoMKdirCMD = "su -m "+ OriginalUsername + " -c 'export HOME="+OriginalHomeDir + "&& npm install --prefix " + '"' + InstallDir + '"' + "    jac459/metadriver 2>" + LogDir + "/BackgroundNPMMeta.txt'"
+    Response = subprocess.call(DoMKdirCMD,shell=True)
     if Response == 0:
        fp =  open(LogDir + '/BackgroundNPMMeta.txt')
        LineIn = fp.readline()
@@ -333,16 +386,18 @@ def DoSomeInit():
     #PackageCache.update()
 
 # Driver program
-global   DidAPTUpdate
+global DidAPTUpdate
 global AllDepsOK
+global CheckedDependenciesAlready 
 AllDepsOK = False
+CheckedDependenciesAlready = False
 if __name__ == "__main__":
    DoSomeInit()
    GoOn = True
    DidAPTUpdate = False
    while GoOn == True:
        MenuChoice = DisplayPrimaryMenu()
-       if MenuChoice == -99:
+       if MenuChoice == "@":
            GoOn = False
            continue
        else:
