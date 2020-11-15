@@ -1,0 +1,63 @@
+pi@raspberrypi:~ $ sudo python3 install.py 
+Looking for git
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+apt install -y git 1>/home/pi/log/BackgroundAPTInstallgit.txt
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Done apt install Reading package lists...
+
+Looking for nodejs
+apt install -y nodejs 1>/home/pi/log/BackgroundAPTInstallnodejs.txt
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Done apt install Reading package lists...
+
+Looking for npm
+apt install -y npm 1>/home/pi/log/BackgroundAPTInstallnpm.txt
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Extracting templates from packages: 100%
+Done apt install Reading package lists...
+
+Looking for nodered
+apt install -y nodered 1>/home/pi/log/BackgroundAPTInstallnodered.txt
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Done apt install Reading package lists...
+
+Looking for mosquitto
+apt install -y mosquitto 1>/home/pi/log/BackgroundAPTInstallmosquitto.txt
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Done apt install Reading package lists...
+
+Looking for meta
+We need to check custom location now .meta
+su -m pi -c 'mkdir  "/home/pi/.meta" 2>/home/pi/log/BackgroundMkdir.txt'
+
+su -m pi -c 'export HOME=/home/pi&& npm install   --prefix "/home/pi/.meta"  jac459/metadriver  2>/home/pi/log/BackgroundNPMmeta.txt'
++ @jac459/metadriver@0.8.15
+added 393 packages from 326 contributors in 80.498s
+Done apt install npm WARN npm npm does not support Node.js v10.21.0
+
+Looking for pm2
+npm install -g pm2     2>/home/pi/log/BackgroundNPMpm2.txt
+/usr/local/bin/pm2 -> /usr/local/lib/node_modules/pm2/bin/pm2
+/usr/local/bin/pm2-dev -> /usr/local/lib/node_modules/pm2/bin/pm2-dev
+/usr/local/bin/pm2-docker -> /usr/local/lib/node_modules/pm2/bin/pm2-docker
+/usr/local/bin/pm2-runtime -> /usr/local/lib/node_modules/pm2/bin/pm2-runtime
++ pm2@4.5.0
+updated 1 package in 19.489s
+Done apt install npm WARN npm npm does not support Node.js v10.21.0
+
+systemctl enable nodered.service
+Created symlink /etc/systemd/system/multi-user.target.wants/nodered.service → /lib/systemd/system/nodered.service.
+That's it, NodeRed is configured to autostart
+systemctl start  nodered.service
