@@ -143,6 +143,7 @@ def DisplayPrimaryMenu():
              '5 Install mosquitto' 'Install and setup mosquitto' \
              '6 Install NodeRed' 'Install and setup NodeRed' \
              '7 examples' 'Refresh examples in Activated directory'  \
+             'S Startup' 'Create utostart for nodered'  \
              '8 Simple' 'Simply install all of the above'  \
              'P Preferences' 'Display/change user preferences'  \
              'X Exit' 'Exit the program'  2>" + LogDir + "/Mainmenu.txt"
@@ -287,6 +288,8 @@ def HandleChoice(i):
             "6": lambda: Do_Install_NodeRed(),
             "7": lambda: Do_Refresh_NEEOCustom(),
             "8": lambda: Do_It_All(),
+            "s": lambda: Do_SetupServiceNodeRed(),
+            "S": lambda: Do_SetupServiceNodeRed(),   
             "p": lambda: Do_PreferencesMenu(),
             "P": lambda: Do_PreferencesMenu(),
             "x": lambda: Do_Exit(),
@@ -330,6 +333,19 @@ def Do_Install_mosquitto():
     print("This will taske some time, please let this process continue....")
     InstallPackage("mosquitto") 
 
+def Do_SetupServiceNodeRed():
+    DONodeRedStart = "systemctl enable nodered.service"
+    print(DONodeRedStart)
+    Response = subprocess.call(DONodeRedStart,shell=True)
+    if Response == 0:
+       print("That's it, NodeRed is configured to autostart")
+    else:
+       print("Fatal error ocurred while setting up autostart NodeRed")
+       sys.exit(12)
+    DONodeRedStart = "systemctl start  nodered.service"
+    Response = subprocess.call(DONodeRedStart,shell=True)
+    print(DONodeRedStart)
+
 def Do_Install_NodeRed(): 
     print("Dependencies for NodeRed okay?")
     if CheckDependencies(BuildNodeRedORMQTTPhase) != True:    # are all dependencies for thjis phase fulfilled?
@@ -340,11 +356,10 @@ def Do_Install_NodeRed():
     print("Now we install NodeRed.")
     print("This will taske some time, please let this process continiue....")
     InstallPackage("nodered") 
-    return
 
     DONodeRedStart = "systemctl enable nodered.service"
     print(DONodeRedStart)
-    Response = subprocess.call(DONodeRedStart)
+    Response = subprocess.call(DONodeRedStart,shell=True)
     if Response == 0:
        print("That's it, NodeRed is installed and configured")
     else:
@@ -459,7 +474,6 @@ global AllDepsOK
 global CheckedDependenciesAlready 
 AllDepsOK = False
 CheckedDependenciesAlready = False
-
 
 if __name__ == "__main__":
    DoSomeInit()
