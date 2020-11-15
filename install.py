@@ -22,25 +22,17 @@ InstalledButNotOK = 90
 NotInstalled = 99
 PackageTypeUnknown = 0
 PackageTypeAPT = 1
-PackageTypeManual = 2
-MyPackages =  [{"name":"git","type": "","versionreq": "2.20.1","status":NotInstalled,"installedversion":"","commandline":"git --version","phaserequired":0},
-              {"name":"nodejs","type": "","versionreq": "10.21.0","status":NotInstalled,"installedversion":"", "commandline": "nodejs --version","phaserequired":0},
-              {"name":"npm","type": "","versionreq": "5.8.0","status":NotInstalled,"installedversion":"", "commandline": "npm --version","phaserequired":0},
-              {"name":"nodered","type": "","versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1},
-              {"name":"mosquitto","type": "","versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1},
+PackageTypeNPM = 2
+PackageTypeManual = 3
+MyPackages =  [{"name":"git","type":PackageTypeAPT,"versionreq": "2.20.1","status":NotInstalled,"installedversion":"","commandline":"git --version","phaserequired":0,"loc":"", "APTParm":"","APTParm2":"","APTUser":"","APTUser":""},
+              {"name":"nodejs","type":PackageTypeAPT,"versionreq": "10.21.0","status":NotInstalled,"installedversion":"", "commandline": "nodejs --version","phaserequired":0,"loc":"", "APTParm":"","APTParm2":"","APTUser":""},
+              {"name":"npm","type":PackageTypeAPT,"versionreq": "5.8.0","status":NotInstalled,"installedversion":"", "commandline": "npm --version","phaserequired":0,"loc":"", "APTParm":"","APTParm2":"","APTUser":""},
+              {"name":"nodered","type":PackageTypeAPT,"versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1,"loc": "", "APTParm":"","APTParm2":"","APTUser":""},
+              {"name":"mosquitto","type":PackageTypeAPT,"versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1,"loc": "", "APTParm":"","APTParm2":"","APTUser":""},
+              {"name":"meta","type":PackageTypeNPM,"versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1,"loc": ".meta", "APTParm":"npm install ","APTParm2":"jac459/metadriver","APTUser":""},
+              {"name":"pm2","type":PackageTypeNPM,"versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1,"loc": "", "APTParm":"npm install -g pm2 ","APTParm2":"","APTUser":"root"}
               ]
-#MyPackages =  [{"name":"git","type": "","versionreq": "2.20.1","status":NotInstalled,"installedversion":"","commandline":"git --version","phaserequired":0},
-#              {"name":"nodejs","type": "","versionreq": "10.21.0","status":NotInstalled,"installedversion":"", "commandline": "nodejs --version","phaserequired":0},
-#              {"name":"npm","type": "","versionreq": "5.8.0","status":NotInstalled,"installedversion":"", "commandline": "npm --version","phaserequired":0},
-#              {"name":"nodered","type": "","versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1},
-#              {"name":"mosquitto","type": "","versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1},
-#              ]
-#MyPackagesx =  ["git","nodejs","npm","nodered"]
-#MyModules =  ["git --vesion","nodejs --version","npm --version","node-red --version"]
-#MyPackageType = [PackageTypeUnknown,PackageTypeUnknown,PackageTypeUnknown,PackageTypeUnknown]
-#MyPackageVersion =  ("2.20.1","10.21.0 ","5.8.0","0","1.0.6")
-#MyPackageStatus =  [NotInstalled,NotInstalled,NotInstalled,NotInstalled,NotInstalled]
-#MyPackageInstalled = ["","","","",""]
+
 InstalledCheckingVersion = 10
 PKGNPMIndex = -1
 PKGNodeRedIndex = -1
@@ -53,25 +45,36 @@ BuildNodeRedORMQTTPhase = -1
 #===============================================================================
 
 
-def CheckPackageInstalled(ThisPackage):
-   
+def CheckPackageInstalled(ThisPackage,ThisType):
+
     PackageCache.open()
     try:
        pkg = PackageCache[ThisPackage]
     except KeyError:
-       print("Package ", ThisPackage,  " is not a package")
+       PackageCache.close()
        return ""
+
     if pkg.is_installed:
         try: 
             inst_ver = pkg.installed.version
         except AttributeError:
             inst_ver = pkg.installedVersion
-        return inst_ver
     else:
         return ""
 
     PackageCache.close()
+    return inst_ver
 
+def GetMyPackageFields(GetPKG):
+
+    print("Looking for",GetPKG)
+    for pkg in MyPackages:
+        if pkg['name'] == GetPKG:
+           return pkg
+
+    DoWhip = "whiptail --title 'Example Dialog' --msgbox 'LOGIC-ERROR! Incorrect package requested "+ GetPKG +  "' 8 78"
+    subprocess.call(DoWhip,shell=True)
+    return ""
 
 def TestPackages_OK(Phase):
     global AllDepsOK
@@ -82,21 +85,21 @@ def TestPackages_OK(Phase):
     MyIndex = 0
     #"name":"git","type": "","versionreq": "2.20.1","status":0,"installedversion":"","commandline":"git --version","phaserequired":0}
     for pkg in MyPackages:
-       if pkg['name']  == "npm": 
+       if pkg['name']  == "npm":
           PKGNPMIndex =  MyIndex
-       elif pkg['name']  == "nodered": 
+       elif pkg['name']  == "nodered":
          PKGNodeRedIndex = MyIndex
 
-       Installed = CheckPackageInstalled(pkg['name'])
+       Installed = CheckPackageInstalled(pkg['name'],pkg['type'])
        if Installed != "":
           pkg['status'] = InstalledCheckingVersion		#Signal package is installed
           VersionOnly = re.match(r'^[0-9.:]*',Installed)
-          i = VersionOnly[0].find(':') 
+          i = VersionOnly[0].find(':')
           if i != -1:
               Installed=VersionOnly[0][i+1:]
           else:
                Installed=VersionOnly[0]
-          pkg['installedversion'] = Installed.strip() 
+          pkg['installedversion'] = Installed.strip()
           if  pkg['installedversion'] < pkg['versionreq'].strip():
               pkg['status'] = InstalledButNotOK                #Signal package is installed, but version is too low
               if pkg['return AllDepsOK'] <= Phase:
@@ -107,21 +110,15 @@ def TestPackages_OK(Phase):
               AllDepsOK = False
        MyIndex = MyIndex +1
 
-    #if AllDepsOK == False:
-    #   if MyPackages[PKGNPMIndex].['status'] != InstalledAndOK:    # problems with npm package?  
-
-    print("Leaving dep part, status = ",AllDepsOK)
     return AllDepsOK
 
 def CheckDependencies(Phase):
-    print("Now we check to see if all dependencies for a certain phase are fulfilled") 
     AllPAckagesForThisPhaseAreOK = True
     for pkg in MyPackages:
        if pkg['phaserequired']  <= Phase:
           if pkg['status']  !=  InstalledAndOK:
              AllPAckagesForThisPhaseAreOK = False
 
-    print("Result:",AllPAckagesForThisPhaseAreOK)
     return AllPAckagesForThisPhaseAreOK
 
 def DisplayPrimaryMenu():
@@ -138,21 +135,15 @@ def DisplayPrimaryMenu():
              '7 Simple' 'Simply install all of the above'  \
              'P Preferences' 'Display/change user preferences'  \
              'X Exit' 'Exit the program'  2>" + LogDir + "/Mainmenu.txt"
-    elif  AllDepsOK == False:
+    else:
        DoWhip += "'1 Check' 'Check dependencies'   \
              '2 Install dep' 'Install the required dependencies' \
-             '4 Install Mosquito' 'Install and setup Mosquito' \
-             '5 Install NodeRed' 'Install and setup NodeRed' \
-             '7 Simple' 'Simply install all of the above'  \
-             'P Preferences' 'Display/change user preferences'  \
-             'X Exit' 'Exit the program'  2>" + LogDir + "/Mainmenu.txt"
-    else:
-       DoWhip += "'1 Check' 'All dependencies are Okay'        \
              '3 Install Metadriver' 'Install and setup Metadriver' \
-             '4 Install Mosquito' 'Install and setup Mosquito' \
-             '5 Install NodeRed' 'Install and setup NodeRed' \
-             '6 Refresh Activated' 'Refresh files in Activated & deactivated folders'  \
-             '7 Simple' 'Simply install all of the above'  \
+             '4 Install PM2' 'Install PM2' \
+             '5 Install mosquitto' 'Install and setup mosquitto' \
+             '6 Install NodeRed' 'Install and setup NodeRed' \
+             '7 examples' 'Refresh examples in Activated directory'  \
+             '8 Simple' 'Simply install all of the above'  \
              'P Preferences' 'Display/change user preferences'  \
              'X Exit' 'Exit the program'  2>" + LogDir + "/Mainmenu.txt"
     Response = subprocess.call(DoWhip,shell=True)
@@ -168,20 +159,20 @@ def DisplayPrimaryMenu():
 def ShowPackageStatus():
 
     DoWhip = "whiptail --title 'Overview status of dependencies'  --msgbox "
-    MyIndex = 0
-    #"name":"git","type": "","versionreq": "2.20.1","status":0,"installedversion":"","commandline":"git --version","phaserequired":0}
     for pkg in MyPackages:
-       print(pkg) 
-       Content = "' Required: " + pkg['name'] + " " + pkg['versionreq']   +  " "
+       Content = "' Required: " + pkg['name'] + " " + pkg['versionreq']
        Content = Content.ljust(35, ' ')
+       if pkg['type'] ==  PackageTypeAPT:
+          Content += " APT "
+       elif  pkg['type'] ==  PackageTypeNPM:
+          Content += " NPM "
        if  pkg['status']  == InstalledAndOK:
            Content += "Found:  "+ pkg['installedversion']  + " --> OK\n'"
        elif  pkg['status'] == InstalledButNotOK:
            Content += "Found:  " + pkg['installedversion'] + " --> Version is too low\n'"
        else:
            Content +=  "Not found --> Need to install\n'"
-       MyIndex += 1
-       DoWhip +=  Content 
+       DoWhip +=  Content
     DoWhip +=  " 25 80 70 "
     subprocess.call(DoWhip,shell=True)
 
@@ -192,9 +183,11 @@ def Do_Install_dependencies():
     if type(DoThis) == type(None) or DoThis.strip() == "":
        return
     for ThisPackage in DoThis.split('"'):
-         if ThisPackage.strip() != "": 
+         if ThisPackage.strip() != "":
             #print("Installing ",ThisPackage.strip())
-            InstallPackage(ThisPackage.strip())
+            # lookup extra parms
+            pkg = GetMyPackageFields(ThisPackage.strip())
+            InstallPackage(pkg)
             InstalledSomething = True
     if InstalledSomething:
        PackageCache.update()
@@ -209,22 +202,55 @@ def DoAPTUpdate():
        #print("Did an apt update",Result) 
        return 
 
-def InstallPackage(ThisPackage):
+def InstallPackage(pkg):
     global DidAPTUpdate
     InstalledSomething = False
     if DidAPTUpdate == False:
        DidAPTUpdate = True
        DoAPTUpdate()
+    if pkg['type'] == PackageTypeAPT:   #Is this an APT-package?
+       APTAddPackageCMD = "apt install -y "+ pkg['name'] + " 1>" + LogDir + "/BackgroundAPTInstall" + pkg['name'] + ".txt"
+       print(APTAddPackageCMD)
+       Response = subprocess.call(APTAddPackageCMD,shell=True)
+       Result = ""
+       if Response == 0:
+          fp =  open(LogDir + "/BackgroundAPTInstall" + pkg['name'] + ".txt")
+          Result = fp.readline()
+          fp.close()
+          print("Done apt install",Result)
+       return Result
 
-    APTAddPackageCMD = "apt install -y " + ThisPackage + " 1>" + LogDir + "/BackgroundAPTInstall.txt"
-    Response = subprocess.call(APTAddPackageCMD,shell=True)
-    Result = ""
-    if Response == 0:
-       fp =  open(LogDir + '/BackgroundAPTInstall.txt')
-       Result = fp.readline()
-       fp.close()
-       #print("Done apt install",Result)
-    return Result
+    MyLoc = ""
+    if pkg['type'] == PackageTypeNPM:   # Is this a NPM-package?
+       if pkg['loc'] != "":              # Do we need to insyall it on a specific location?
+          print("We need to check custom location now",pkg['loc'])
+          InstallDir = OriginalHomeDir+"/"+pkg['loc']
+          MyLoc = " --prefix " + '"' + InstallDir + '"' + " " 
+          if os.path.isdir(InstallDir) == False:
+             DoMKDirCMD = "su -m "+ OriginalUsername + " -c 'mkdir  "  + '"' + InstallDir + '"' + " 2>"+ LogDir + "/BackgroundMkdir.txt'"
+             print(DoMKDirCMD)
+             Response = subprocess.call(DoMKDirCMD,shell=True)
+             if Response == 0:   
+                fp =  open(LogDir + "/BackgroundMkdir.txt")
+                LineIn = fp.readline()
+                print(LineIn)
+                fp.close()   
+             else:
+                print("Fatal error ocurred  when creating directory for  metadriver: ",InstallDir)
+                sys.exit(12)
+       if pkg['APTUser'] != "":
+          APTNPMPackageCMD =  pkg['APTParm'] +  " "  +  MyLoc  + " " + pkg['APTParm2'] + "  2>" + LogDir + "/BackgroundNPM"+ pkg['name'] + ".txt"
+       else:
+          APTNPMPackageCMD = "su -m "+ OriginalUsername + " -c 'export HOME="+OriginalHomeDir + "&& " +  pkg['APTParm'] +  " "  +  MyLoc  + " " + pkg['APTParm2'] + "  2>" + LogDir + "/BackgroundNPM"+ pkg['name'] + ".txt'"
+       print(APTNPMPackageCMD)
+       Response = subprocess.call(APTNPMPackageCMD,shell=True)
+       Result = ""
+       if Response == 0:
+          fp =  open(LogDir + "/BackgroundNPM" + pkg['name'] + ".txt")
+          Result = fp.readline()
+          fp.close()
+          print("Done apt install",Result)
+       return Result
 
 def SelectPackageToInstall():
 
@@ -234,7 +260,7 @@ def SelectPackageToInstall():
        if  pkg['status']  != InstalledAndOK:
            Content = "'"+ pkg['name'] + "' '" + pkg['name'] + " " + pkg['versionreq']  +  "' "
            Content = Content.ljust(35, ' ') + "ON "
-           DoWhip +=  Content 
+           DoWhip +=  Content
        MyIndex += 1
     DoWhip += " 2>" + LogDir + "/BackgroundPackageToInstall.txt"
     Response = subprocess.call(DoWhip,shell=True)
@@ -249,17 +275,18 @@ def Do_Check_dependencies():
        ShowPackageStatus()
 
 def Do_PreferencesMenu():
-    print("We are going to setup some preferences") 
+    print("We are going to setup some preferences")
 
 def HandleChoice(i):
     switcher = {
             "1": lambda: Do_Check_dependencies(),
             "2": lambda: Do_Install_dependencies(),
             "3": lambda: Do_Install_Meta(),
-            "4": lambda: Do_Install_Mosquito(),
-            "5": lambda: Do_Install_NodeRed(),
-            "6": lambda: Do_Refresh_NEEOCustom(),
-            "7": lambda: Do_It_All(),
+            "4": lambda: Do_Install_PM2(),
+            "5": lambda: Do_Install_mosquitto(),
+            "6": lambda: Do_Install_NodeRed(),
+            "7": lambda: Do_Refresh_NEEOCustom(),
+            "8": lambda: Do_It_All(),
             "p": lambda: Do_PreferencesMenu(),
             "P": lambda: Do_PreferencesMenu(),
             "x": lambda: Do_Exit(),
@@ -268,22 +295,53 @@ def HandleChoice(i):
     func = switcher.get(i[0], lambda: 'Invalid')
     func()
 
-def Do_Install_Mosquito():
-    print("Derpendencies for  Mosquito okay?")
-    if CheckDependencies(BuildNodeRedORMQTTPhase): 
-        print("Now we install NodeRed.")
-        print("This will taske some time, please let this process continiue....")
-        InstallPackage("mosquito") 
+def Do_Install_mosquitto():
+    print("Dependencies for mosquitto okay?")
+    if CheckDependencies(BuildNodeRedORMQTTPhase)!=True:   # n oit all dependencies have been fulfilled
+       DoWhip = "whiptail --title 'Example Dialog' --msgbox 'Not all dependencies are fullfilled, please run function 1 and 2 first.' 8 78"
+       subprocess.call(DoWhip,shell=True)
+       return 12
+
+    print("Now we install mosquitto.")
+    print("First we need to get the gpg-key for mosquitto")
+    print("wget http://repo.mosquitto.org/debian/mosquitto-repo.gpg.key")
+    DoCMD = "wget http://repo.mosquitto.org/debian/mosquitto-repo.gpg.key 2>" + LogDir + "/BackgroundmosquittoWget.txt"
+    Response = subprocess.call(DoCMD,shell=True)
+    if Response == 0:
+       fp =  open(LogDir + '/BackgroundmosquittoWget.txt')
+       Choice = fp.readline()
+       fp.close()   
+    else:
+       print("Fatal error ocurred while getting gpg-keys for mosquitto")
+       sys.exit(12)     
+    print("Applying key, so we can get the mosquittopackage....")
+    DoCMD = "apt-key add mosquitto-repo.gpg.key 2>" + LogDir + "/BackgroundmosquittoAddKey.txt"
+    Response = subprocess.call(DoCMD,shell=True)
+    if Response == 0:
+       fp =  open(LogDir + '/BackgroundmosquittoAddKey.txt')
+       Choice = fp.readline()
+       fp.close()   
+    else:
+       print("Fatal error ocurred while applying  gpg-keys for mosquitto")
+       sys.exit(12)     
+    print("Now we only need to update apt, so it will know the mosquitto package, then we can install ite....")    
+    DoAPTUpdate()
+    print("Ready to install mosquitto.....") 
+    print("This will taske some time, please let this process continue....")
+    InstallPackage("mosquitto") 
 
 def Do_Install_NodeRed(): 
-
+    print("Dependencies for NodeRed okay?")
     if CheckDependencies(BuildNodeRedORMQTTPhase) != True:    # are all dependencies for thjis phase fulfilled?
-       print("Not all dependecies for NodeRed are fulfilled")
-       return
+       DoWhip = "whiptail --title 'Example Dialog' --msgbox 'Not all dependencies are fullfilled, please run function 1 and 2 first.' 8 78"
+       subprocess.call(DoWhip,shell=True)
+       return 12
+
     print("Now we install NodeRed.")
     print("This will taske some time, please let this process continiue....")
     InstallPackage("nodered") 
     return
+
     DONodeRedStart = "systemctl enable nodered.service"
     print(DONodeRedStart)
     Response = subprocess.call(DONodeRedStart)
@@ -300,12 +358,20 @@ def Do_Refresh_NEEOCustom():
      tmpdirname = tempfile.TemporaryDirectory() 
      print('created temporary directory', tmpdirname)
      # Code to save user directories
+
 def Do_It_All():
     Print("Now just run through all the options.")
 
 def Do_Exit():
     sys.exit(12)
 
+def Do_Install_PM2():
+
+    print("Dependencies for PM2 okay?")
+    if CheckDependencies(BuildMetaPhase)!=True:   # n oit all dependencies have been fulfilled
+       DoWhip = "whiptail --title 'Example Dialog' --msgbox 'Not all dependencies are fullfilled, please run function 1 and 2 first.' 8 78"
+       subprocess.call(DoWhip,shell=True)
+       return 12
 
 def Do_Install_Meta(): # Install Metadriver
     global AllDepsOK
@@ -313,7 +379,9 @@ def Do_Install_Meta(): # Install Metadriver
     global OriginalUID
     global OriginalGID
     global InstallDir
-    if AllDepsOK != True:
+
+    print("Dependencies for Metadriver okay?")
+    if CheckDependencies(BuildMetaPhase)!=True:   # n oit all dependencies have been fulfilled
        DoWhip = "whiptail --title 'Example Dialog' --msgbox 'Not all dependencies are fullfilled, please run function 1 and 2 first.' 8 78"
        subprocess.call(DoWhip,shell=True)
        return 12
@@ -391,6 +459,8 @@ global AllDepsOK
 global CheckedDependenciesAlready 
 AllDepsOK = False
 CheckedDependenciesAlready = False
+
+
 if __name__ == "__main__":
    DoSomeInit()
    GoOn = True
