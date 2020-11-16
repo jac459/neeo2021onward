@@ -1,20 +1,9 @@
 
-#import cookielib
 import sys
 import os
 import apt
-import re
 import subprocess
-import tempfile
-#import getent
-#import Tkinter as tk 
-#import urllib
-#import urllib2
-#import unicodedata
-#import zlib
-#import shutil
-#from urllib2 import Request
-import requests
+import re
 
 InstalledCheckingVersion = 10
 InstalledAndOK = 0
@@ -24,13 +13,13 @@ PackageTypeUnknown = 0
 PackageTypeAPT = 1
 PackageTypeNPM = 2
 PackageTypeManual = 3
-MyPackages =  [{"name":"git","type":PackageTypeAPT,"versionreq": "2.20.1","status":NotInstalled,"installedversion":"","commandline":"git --version","phaserequired":0,"loc":"", "APTParm":"","APTParm2":"","APTUser":"","APTUser":""},
-              {"name":"nodejs","type":PackageTypeAPT,"versionreq": "10.21.0","status":NotInstalled,"installedversion":"", "commandline": "nodejs --version","phaserequired":0,"loc":"", "APTParm":"","APTParm2":"","APTUser":""},
-              {"name":"npm","type":PackageTypeAPT,"versionreq": "5.8.0","status":NotInstalled,"installedversion":"", "commandline": "npm --version","phaserequired":0,"loc":"", "APTParm":"","APTParm2":"","APTUser":""},
-              {"name":"nodered","type":PackageTypeAPT,"versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1,"loc": "", "APTParm":"","APTParm2":"","APTUser":""},
-              {"name":"mosquitto","type":PackageTypeAPT,"versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1,"loc": "", "APTParm":"","APTParm2":"","APTUser":""},
-              {"name":"meta","type":PackageTypeNPM,"versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1,"loc": ".meta", "APTParm":"npm install ","APTParm2":"jac459/metadriver","APTUser":""},
-              {"name":"pm2","type":PackageTypeNPM,"versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1,"loc": "", "APTParm":"npm install -g pm2 ","APTParm2":"","APTUser":"root"}
+MyPackages =  [{"name":"git","type":PackageTypeAPT,"versionreq": "2.20.1","status":NotInstalled,"installedversion":"","commandline":"git --version","phaserequired":0,"loc":"", "APTParm":"","APTParm2":"","APTUser":"","APTUser":"","mydep":{}},
+              {"name":"nodejs","type":PackageTypeAPT,"versionreq": "10.21.0","status":NotInstalled,"installedversion":"", "commandline": "nodejs --version","phaserequired":0,"loc":"", "APTParm":"","APTParm2":"","APTUser":"","mydep":{}},
+              {"name":"npm","type":PackageTypeAPT,"versionreq": "5.8.0","status":NotInstalled,"installedversion":"", "commandline": "npm --version","phaserequired":0,"loc":"", "APTParm":"","APTParm2":"","APTUser":"","mydep":{}},
+              {"name":"nodered","type":PackageTypeAPT,"versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1,"loc": "", "APTParm":"","APTParm2":"","APTUser":"","mydep":{"git","nodejs","npm"}},
+              {"name":"mosquitto","type":PackageTypeAPT,"versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1,"loc": "", "APTParm":"","APTParm2":"","APTUser":"","mydep":{}},
+              {"name":"meta","type":PackageTypeNPM,"versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1,"loc": ".meta", "APTParm":"npm install ","APTParm2":"jac459/metadriver","APTUser":"","mydep":{}},
+              {"name":"pm2","type":PackageTypeNPM,"versionreq": "","status":NotInstalled,"installedversion":"", "commandline": "node-red list","phaserequired":1,"loc": "", "APTParm":"npm install -g pm2 ","APTParm2":"","APTUser":"root","mydep":{}}
               ]
 
 InstalledCheckingVersion = 10
@@ -67,7 +56,6 @@ def CheckPackageInstalled(ThisPackage,ThisType):
 
 def GetMyPackageFields(GetPKG):
 
-    print("Looking for",GetPKG)
     for pkg in MyPackages:
         if pkg['name'] == GetPKG:
            return pkg
@@ -128,25 +116,22 @@ def DisplayPrimaryMenu():
     WT_WIDTH  = 40
     WT_MENU_HEIGHT = 12
 
-    DoWhip = "whiptail --title 'Raspberry pi configurator for NEEO' --menu 'Setup Options' 30 70 20 " + \
+    DoWhip = "whiptail --title 'Raspberry pi configurator for NEEO' --menu 'Setup Options' 35 70 25 " + \
              " --cancel-button Finish --ok-button Select "
     if CheckedDependenciesAlready == False:
-       DoWhip += "'1 Check' 'Check dependencies'    \
+       DoWhip += "'1 Check' 'Check packages'    \
              '7 Simple' 'Simply install all of the above'  \
              'P Preferences' 'Display/change user preferences'  \
              'X Exit' 'Exit the program'  2>" + LogDir + "/Mainmenu.txt"
     else:
-       DoWhip += "'1 Check' 'Check dependencies'   \
-             '2 Install dep' 'Install the required dependencies' \
-             '3 Install Metadriver' 'Install and setup Metadriver' \
-             '4 Install PM2' 'Install PM2' \
-             '5 Install mosquitto' 'Install and setup mosquitto' \
-             '6 Install NodeRed' 'Install and setup NodeRed' \
+       DoWhip += "'1 Check' 'Check packages'   \
+             '2 Install' 'Install missing packages' \
              '7 examples' 'Refresh examples in Activated directory'  \
-             'S Startup' 'Create utostart for nodered'  \
+             'S Startup' 'Create autostart for nodered'  \
              '8 Simple' 'Simply install all of the above'  \
              'P Preferences' 'Display/change user preferences'  \
-             'X Exit' 'Exit the program'  2>" + LogDir + "/Mainmenu.txt"
+             'X Exit' 'Exit the program'   \
+             2>" + LogDir + "/Mainmenu.txt"
     Response = subprocess.call(DoWhip,shell=True)
     if Response == 0:
        fp =  open(LogDir + '/Mainmenu.txt')
@@ -155,6 +140,7 @@ def DisplayPrimaryMenu():
        return  Choice
     else:
        print("User cancelled the dialog")
+       Do_Exit(0)
        return "@"  # signal somethiong is wrong with the main menu
 
 def ShowPackageStatus():
@@ -183,6 +169,7 @@ def Do_Install_dependencies():
     InstalledSomething = False
     if type(DoThis) == type(None) or DoThis.strip() == "":
        return
+
     for ThisPackage in DoThis.split('"'):
          if ThisPackage.strip() != "":
             #print("Installing ",ThisPackage.strip())
@@ -209,6 +196,11 @@ def InstallPackage(pkg):
     if DidAPTUpdate == False:
        DidAPTUpdate = True
        DoAPTUpdate()
+
+    if pkg['mydep']!= "":
+       for dep in pkg['mydep']:
+           print(pkg['name'], "has dependency: ",dep)
+
     if pkg['type'] == PackageTypeAPT:   #Is this an APT-package?
        APTAddPackageCMD = "apt install -y "+ pkg['name'] + " 1>" + LogDir + "/BackgroundAPTInstall" + pkg['name'] + ".txt"
        print(APTAddPackageCMD)
@@ -238,7 +230,7 @@ def InstallPackage(pkg):
                 fp.close()   
              else:
                 print("Fatal error ocurred  when creating directory for  metadriver: ",InstallDir)
-                sys.exit(12)
+                Do_Exit(12)
        if pkg['APTUser'] != "":
           APTNPMPackageCMD =  pkg['APTParm'] +  " "  +  MyLoc  + " " + pkg['APTParm2'] + "  2>" + LogDir + "/BackgroundNPM"+ pkg['name'] + ".txt"
        else:
@@ -255,7 +247,7 @@ def InstallPackage(pkg):
 
 def SelectPackageToInstall():
 
-    DoWhip = "whiptail --title 'Install dependencies'   --checklist  'Select packages you want to be installed'  25 78 4 "
+    DoWhip = "whiptail --title 'Install dependencies'   --checklist  'Select packages you want to be installed'  25 78 15 "
     MyIndex = 0
     for pkg in MyPackages:
        if  pkg['status']  != InstalledAndOK:
@@ -282,56 +274,18 @@ def HandleChoice(i):
     switcher = {
             "1": lambda: Do_Check_dependencies(),
             "2": lambda: Do_Install_dependencies(),
-            "3": lambda: Do_Install_Meta(),
-            "4": lambda: Do_Install_PM2(),
-            "5": lambda: Do_Install_mosquitto(),
-            "6": lambda: Do_Install_NodeRed(),
             "7": lambda: Do_Refresh_NEEOCustom(),
             "8": lambda: Do_It_All(),
             "s": lambda: Do_SetupServiceNodeRed(),
             "S": lambda: Do_SetupServiceNodeRed(),   
             "p": lambda: Do_PreferencesMenu(),
             "P": lambda: Do_PreferencesMenu(),
-            "x": lambda: Do_Exit(),
-            "X": lambda: Do_Exit()
+            "x": lambda: Do_Exit(0),
+            "X": lambda: Do_Exit(0)
         }
     func = switcher.get(i[0], lambda: 'Invalid')
     func()
 
-def Do_Install_mosquitto():
-    print("Dependencies for mosquitto okay?")
-    if CheckDependencies(BuildNodeRedORMQTTPhase)!=True:   # n oit all dependencies have been fulfilled
-       DoWhip = "whiptail --title 'Example Dialog' --msgbox 'Not all dependencies are fullfilled, please run function 1 and 2 first.' 8 78"
-       subprocess.call(DoWhip,shell=True)
-       return 12
-
-    print("Now we install mosquitto.")
-    print("First we need to get the gpg-key for mosquitto")
-    print("wget http://repo.mosquitto.org/debian/mosquitto-repo.gpg.key")
-    DoCMD = "wget http://repo.mosquitto.org/debian/mosquitto-repo.gpg.key 2>" + LogDir + "/BackgroundmosquittoWget.txt"
-    Response = subprocess.call(DoCMD,shell=True)
-    if Response == 0:
-       fp =  open(LogDir + '/BackgroundmosquittoWget.txt')
-       Choice = fp.readline()
-       fp.close()   
-    else:
-       print("Fatal error ocurred while getting gpg-keys for mosquitto")
-       sys.exit(12)     
-    print("Applying key, so we can get the mosquittopackage....")
-    DoCMD = "apt-key add mosquitto-repo.gpg.key 2>" + LogDir + "/BackgroundmosquittoAddKey.txt"
-    Response = subprocess.call(DoCMD,shell=True)
-    if Response == 0:
-       fp =  open(LogDir + '/BackgroundmosquittoAddKey.txt')
-       Choice = fp.readline()
-       fp.close()   
-    else:
-       print("Fatal error ocurred while applying  gpg-keys for mosquitto")
-       sys.exit(12)     
-    print("Now we only need to update apt, so it will know the mosquitto package, then we can install ite....")    
-    DoAPTUpdate()
-    print("Ready to install mosquitto.....") 
-    print("This will taske some time, please let this process continue....")
-    InstallPackage("mosquitto") 
 
 def Do_SetupServiceNodeRed():
     DONodeRedStart = "systemctl enable nodered.service"
@@ -341,88 +295,29 @@ def Do_SetupServiceNodeRed():
        print("That's it, NodeRed is configured to autostart")
     else:
        print("Fatal error ocurred while setting up autostart NodeRed")
-       sys.exit(12)
+       Do_Exit(12)
     DONodeRedStart = "systemctl start  nodered.service"
     Response = subprocess.call(DONodeRedStart,shell=True)
     print(DONodeRedStart)
 
-def Do_Install_NodeRed(): 
-    print("Dependencies for NodeRed okay?")
-    if CheckDependencies(BuildNodeRedORMQTTPhase) != True:    # are all dependencies for thjis phase fulfilled?
-       DoWhip = "whiptail --title 'Example Dialog' --msgbox 'Not all dependencies are fullfilled, please run function 1 and 2 first.' 8 78"
-       subprocess.call(DoWhip,shell=True)
-       return 12
-
-    print("Now we install NodeRed.")
-    print("This will taske some time, please let this process continiue....")
-    InstallPackage("nodered") 
-
-    DONodeRedStart = "systemctl enable nodered.service"
-    print(DONodeRedStart)
-    Response = subprocess.call(DONodeRedStart,shell=True)
-    if Response == 0:
-       print("That's it, NodeRed is installed and configured")
-    else:
-       print("Fatal error ocurred while installing NodeRed")
-       sys.exit(12)
 
 def Do_Refresh_NEEOCustom():
      print("We need to refresh 'Activated'and 'Deactivated' directories") 
      # save the non-volatile directories 
 
-     tmpdirname = tempfile.TemporaryDirectory() 
-     print('created temporary directory', tmpdirname)
      # Code to save user directories
 
 def Do_It_All():
     Print("Now just run through all the options.")
 
-def Do_Exit():
-    sys.exit(12)
-
-def Do_Install_PM2():
-
-    print("Dependencies for PM2 okay?")
-    if CheckDependencies(BuildMetaPhase)!=True:   # n oit all dependencies have been fulfilled
-       DoWhip = "whiptail --title 'Example Dialog' --msgbox 'Not all dependencies are fullfilled, please run function 1 and 2 first.' 8 78"
-       subprocess.call(DoWhip,shell=True)
-       return 12
-
-def Do_Install_Meta(): # Install Metadriver
-    global AllDepsOK
-    global OriginalHomeDir
-    global OriginalUID
-    global OriginalGID
-    global InstallDir
-
-    print("Dependencies for Metadriver okay?")
-    if CheckDependencies(BuildMetaPhase)!=True:   # n oit all dependencies have been fulfilled
-       DoWhip = "whiptail --title 'Example Dialog' --msgbox 'Not all dependencies are fullfilled, please run function 1 and 2 first.' 8 78"
-       subprocess.call(DoWhip,shell=True)
-       return 12
-
-    if os.path.isdir(InstallDir) == False:
-       DoMKDirCMD = "su -m "+ OriginalUsername + " -c 'mkdir  "  + '"' + InstallDir + '"' + " 2>"+ LogDir + "/BackgroundMkdir.txt'"
-       Response = subprocess.call(DoMKDirCMD,shell=True)
-       if Response == 0:
-          fp =  open(LogDir + '/BackgroundMkdir.txt')
-          LineIn = fp.readline()
-          print(LineIn)
-          fp.close()
-       else:
-          print("Fatal error ocurred  when creating directopry for  metadriver: ",InstallDir)
-          sys.exit(12)
-
-    DoMKdirCMD = "su -m "+ OriginalUsername + " -c 'export HOME="+OriginalHomeDir + "&& npm install --prefix " + '"' + InstallDir + '"' + "    jac459/metadriver 2>" + LogDir + "/BackgroundNPMMeta.txt'"
-    Response = subprocess.call(DoMKdirCMD,shell=True)
-    if Response == 0:
-       fp =  open(LogDir + '/BackgroundNPMMeta.txt')
-       LineIn = fp.readline()
-       print(LineIn)
-       fp.close()
-    else:
-       print("Fatal error ocurred  when installing metadriver")
-       sys.exit(12)
+def Do_Exit(RC):                                                        #exit, but first set  logdirectory+fils in it to original user&group
+    for root, dirs, files in os.walk(LogDir):
+       for momo in dirs:
+          os.chown(momo, OriginalUID,  OriginalGID)
+       for file in files:
+          fname = os.path.join(root, file)
+          os.chown(fname, OriginalUID,  OriginalGID)
+    sys.exit(RC)
 
 def DoSomeInit():
     global OriginalUsername
@@ -434,26 +329,31 @@ def DoSomeInit():
     global LogDir
     global CurrDir
 
+    MyUsername = os.environ['USER']
+    if MyUsername!='root':
+       print("please call this program with elevated rights (sudo xxx)")
+       Do_Exit(12)
+
     OriginalUsername = os.environ['SUDO_USER']
     DoThis = "getent passwd '" + OriginalUsername + "'  | cut -d: -f3,4,6 >BackgroundGetUserProperties.txt"
-    Response = subprocess.call(DoThis,shell=True)
+    Response = subprocess.call(DoThis,shell=True)                #get originalo users homedir, GID en UID from /etc/passwd file
     if Response == 0:
        fp =  open('BackgroundGetUserProperties.txt')
        LineIn = fp.readline()
        Fields = LineIn.split(':')
-       OriginalUID     = Fields[0]
-       OriginalGID     = Fields[1]
-       OriginalHomeDir = Fields[2].strip('\n') 
+       OriginalUID     = int(Fields[0])
+       OriginalGID     = int(Fields[1])
+       OriginalHomeDir = Fields[2].strip('\n')
        fp.close()
     else:
        print("Fatal error ocurred  when accessing properties of original userid",OriginalUsername)
-       sys.exit(12)
+       Do_Exit(12)
 
-    CurrDir = os.getcwd()
+    CurrDir = os.getcwd()                                        #what's the current directory
     LogDir =  CurrDir +  "/log"
-    
-    if os.path.isdir(LogDir) == False:
-       DoNPMCMD = "su -m "+ OriginalUsername + " -c 'mkdir  "  + '"' + LogDir + '"' + " 2>BackgroundMkdir.txt'"
+
+    if os.path.isdir(LogDir) == False:                           # Check to see if LOG-directory already exists (~/log)
+       DoNPMCMD = "su -m "+ OriginalUsername + " -c 'mkdir  "  + '"' + LogDir + '"' + " 2>BackgroundMkdir.txt'"   # No, so create it
        Response = subprocess.call(DoNPMCMD,shell=True)
        if Response == 0:
           fp =  open('BackgroundMkdir.txt')
@@ -462,16 +362,15 @@ def DoSomeInit():
           fp.close()
        else:
           print("Fatal error ocurred  when installing metadriver")
-          sys.exit(12)
+          Do_Exit(12)
 
     InstallDir = OriginalHomeDir+"/.meta"
-    PackageCache  = apt.cache.Cache() 
-    #PackageCache.update()
+    PackageCache  = apt.cache.Cache()
 
 # Driver program
 global DidAPTUpdate
 global AllDepsOK
-global CheckedDependenciesAlready 
+global CheckedDependenciesAlready
 AllDepsOK = False
 CheckedDependenciesAlready = False
 
@@ -481,7 +380,7 @@ if __name__ == "__main__":
    DidAPTUpdate = False
    while GoOn == True:
        MenuChoice = DisplayPrimaryMenu()
-       if MenuChoice == "@":
+       if MenuChoice == "@":                        # fatal error while displaying main menu
            GoOn = False
            continue
        else:
