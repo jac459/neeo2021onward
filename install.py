@@ -64,40 +64,53 @@ def GetMyPackageFields(GetPKG):
     subprocess.call(DoWhip,shell=True)
     return ""
 
+
 def TestPackages_OK(Phase):
     global AllDepsOK
     global CheckedDependenciesAlready
-
     CheckedDependenciesAlready = True
     AllDepsOK = True
-    MyIndex = 0
-    #"name":"git","type": "","versionreq": "2.20.1","status":0,"installedversion":"","commandline":"git --version","phaserequired":0}
+    ChangedDir = False                                          # assume we'll stay in the current directory
     for pkg in MyPackages:
-       if pkg['name']  == "npm":
-          PKGNPMIndex =  MyIndex
-       elif pkg['name']  == "nodered":
-         PKGNodeRedIndex = MyIndex
+       if pkg['type']  == PackageTypeAPT:
+          Installed = CheckPackageInstalled(pkg['name'],pkg['type'])
+          if Installed != "":
+             pkg['status'] = InstalledCheckingVersion		#Signal package is installed
+             VersionOnly = re.match(r'^[0-9.:]*',Installed)
+             i = VersionOnly[0].find(':')
+             if i != -1:
+                 Installed=VersionOnly[0][i+1:]
+             else:
+                  Installed=VersionOnly[0]
+             pkg['installedversion'] = Installed.strip()
+       elif pkg['type'] == PackageTypeNPM:
+          if " -g " in pkg['APTParm']:
+             doglob = " -g "
+          else:
+             doglob = ""
+             ChangedDir = True                                # We need to leave the current directory, so we can see if package is installed locally there
+             os.chdir(OriginalHomeDir+"/"+pkg['loc'])
 
-       Installed = CheckPackageInstalled(pkg['name'],pkg['type'])
-       if Installed != "":
-          pkg['status'] = InstalledCheckingVersion		#Signal package is installed
-          VersionOnly = re.match(r'^[0-9.:]*',Installed)
-          i = VersionOnly[0].find(':')
-          if i != -1:
-              Installed=VersionOnly[0][i+1:]
+          NPMListCMD = "npm list "+ doglob+" | grep -i " + pkg['name']+"@ 1>" + LogDir + "/BackgroundNPMList.txt"
+          Response = subprocess.call(NPMListCMD,shell=True)
+          if Response == 0:  # success for npm list
+             fp =  open(LogDir + '/BackgroundNPMList.txt')
+             Result = fp.readline()
+             fp.close()
+             pkg['status'] = InstalledCheckingVersion
+             MyVersion = Result.split('@')
+             pkg['installedversion']  = MyVersion[1].strip()
           else:
-               Installed=VersionOnly[0]
-          pkg['installedversion'] = Installed.strip()
-          if  pkg['installedversion'] < pkg['versionreq'].strip():
-              pkg['status'] = InstalledButNotOK                #Signal package is installed, but version is too low
-              if pkg['return AllDepsOK'] <= Phase:
-                 AllDepsOK = False
-          else:
-              pkg['status'] = InstalledAndOK                   #Signal package is installed with correct version
+             AllDepsOK = False
+             #return "@"  # signal somethiong is wrong with the main menu
+
+       if  pkg['installedversion'] < pkg['versionreq'].strip():
+           pkg['status'] = InstalledButNotOK                #Signal package is installed, but version is too low
+           AllDepsOK = False
        else:
-              AllDepsOK = False
-       MyIndex = MyIndex +1
-
+           pkg['status'] = InstalledAndOK                   #Signal package is installed with correct version
+    if ChangedDir:
+        os.chdir(CurrDir)
     return AllDepsOK
 
 def CheckDependencies(Phase):
@@ -218,16 +231,16 @@ def InstallPackage(pkg):
        if pkg['loc'] != "":              # Do we need to insyall it on a specific location?
           print("We need to check custom location now",pkg['loc'])
           InstallDir = OriginalHomeDir+"/"+pkg['loc']
-          MyLoc = " --prefix " + '"' + InstallDir + '"' + " " 
+          MyLoc = " --prefix " + '"' + InstallDir + '"' + " "
           if os.path.isdir(InstallDir) == False:
              DoMKDirCMD = "su -m "+ OriginalUsername + " -c 'mkdir  "  + '"' + InstallDir + '"' + " 2>"+ LogDir + "/BackgroundMkdir.txt'"
              print(DoMKDirCMD)
              Response = subprocess.call(DoMKDirCMD,shell=True)
-             if Response == 0:   
+             if Response == 0:
                 fp =  open(LogDir + "/BackgroundMkdir.txt")
                 LineIn = fp.readline()
                 print(LineIn)
-                fp.close()   
+                fp.close()
              else:
                 print("Fatal error ocurred  when creating directory for  metadriver: ",InstallDir)
                 Do_Exit(12)
@@ -264,8 +277,8 @@ def SelectPackageToInstall():
        return Choice
 
 def Do_Check_dependencies():
-    if TestPackages_OK(0) != True:
-       ShowPackageStatus()
+    TestPackages_OK(0)
+    ShowPackageStatus()
 
 def Do_PreferencesMenu():
     print("We are going to setup some preferences")
