@@ -84,6 +84,9 @@ A. That is still a viable solution! You do not need to root your brain per se to
 Q. Do I need to root my Brain to run the Metadriver?
 A. No, you can also run it on additional hardware yourself, like a Raspberry Pi.
 
+Q. I see a new firmware from NEEO is available, can I install that and then root my Brain again?
+A. Not directly! A firmware update needs to be checked before it can be patched. Check the Telegram community, they are probably already aware of it.   
+
 Q. Can I run the rooted Brain on a virtualised system?
 A. This should be possible, but hasn't really been pursued. Current experience shows no benefit of such a (more powerful) solution: custom drivers work very well on the Brain's rooted hardware.
   
@@ -109,3 +112,9 @@ A. You could, but the YIO is much more expensive and has a totally locked down f
 
 Q. Can we reflash the Brain and Remote so that it will become "the new C4-NEEO"?
 A. Probably not. Control4 probably uses (slightly) different hardware. It was never the intention of this community to convert the classic NEEO-remote to a C4 as this would probably violate Control4-copyrights.    
+
+Q. Can I send my own IR-codes via the Brain?
+A. Yes you can. You need to have the IR-code in global cache format. This is an 
+
+example:
+http://192.168.1.2:3000/irblaster/send_ir?code=sendir,1:1,1,38000,3,1,152,155,19,78,19,78,19,78,19,78,19,39,19,39,19,78,19,39,19,78,19,39,19,78,19,39,19,39,19,41,18,39,19,39,19,78,19,78,19,39,19,78,19,40,19,78,19,39,19,78,19,330
