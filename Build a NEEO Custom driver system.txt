@@ -1,0 +1,48 @@
+Build a NEEO custom-driver system
+
+Creating a LINUX system that can host custom drivers (and the MetaDriver) isn't very difficult, bit tedious.
+That's why an installer script was created that takes a freshly installed Linux system (Debian based, like Raspbian) 
+and add the necessary packages to it automatically, so you can begin using/developing custom device drivers.
+The installer has been tested extensively on a Raspberry Pi, it is strongly advised to use that combination as well. 
+Therefore, we'll assume you will be using a Raspberry Pi, with a Raspbian image installed on it. That could be a minimal install (enough for NEEO) or a desktop version.
+
+INSTALLATION:
+Installation is simple: (all commands have encling double-quotes (" ") surrounding them to show the complete command, do NOT type these double quotes when entering the command in Linux  
+- Make sure that you have access to a command line, either through "terminal on Raspbian Desktop" or ssh (Tip: add a file called ssh in the root of the boot-partition to enable SSH) 
+- Login to your Raspberry Pi (ssh or login desktop and open a terminal session) with normal authorisation (user pi)
+- Go to a directory where you have write-access, normally this is your HOME-directory (command "cd ~")
+- Type "wget -N install.py  https://raw.githubusercontent.com/jac459/neeo2021onward/main/install.py" to download the installer
+- This should give you the file installer.py in the current directory. You can use the command "ls -al | grep -i installer.py" to see the file (which is written in Python V3)
+
+HOW TO USE THE INSTALLER:
+
+To execute the installer, we will start the python3 interpreter with elevated rights on the command prompt (ssh or terminal): 
+- "cd ~" (or the directory where you downloaded the installer) 
+- "sudo python3 install.py"
+
+FUNCTIONS OF THE INSTALLER:
+A) For a fresh install
+- When the installer is started, it checks if it is started with elevated rights (the sudo part of the command). If not, it stops with the message "please call this program with elevated rights (sudo xxx)" 
+- After some initialisation, a menu will be displayed with only 3 options:
+  - 1 Check packages
+  - 7 Examples
+  - x Exit
+- Initially, Choose option 1, Check packages. This does a check for all required packages if they are installed and if the version is compatible with the use of NEEO.   
+  Note this may take a while on slower Raspberry Pi's.
+- Then a dialog opens that shows all the packages that are required for setting up this NEEO custom device driver host. It shows whether the package is installed and if so, which version.
+- Going back to the main menu, you'll note that more options are now available: 2) Install packages, 8) Simple and S) Startup.
+- (Not implemented yet!): Option "8 Simple" just initiates all actions that are required to reach a complete NEEO host. This is the easiest way to setup. Type this  if you just want to have the device setup and you're not interested in what's inside- 
+- Or you could use option "2 Install packages". This shows you a list of packages that are required for a NEEO host, but not installed or of which the version is too low.
+- In Option 2, by default all packages are selected, you  an deselect any if you like. When you hit enter or TAB to OK, installation of the selected packages will start.
+- For each package to be installed, a line specifying the command that will be used for it will be printed. Any output of the installation will be captured in dedicated files in the log-directory in your homedirectory.  
+- After the installation is done, you can select option "S Start" so that nodered can be made to run as a service with auto start.
+- The last option  (apart from the obvious X for exit) is "7 Examples". This option refreshes the directories "activated" and "deactivated". These directories hold the actual custom device drivers that run under the metadriver.
+   During the first installation of the metadriver, these directories are filled with useable drivers; subsequent installations will not change these two directories anymore. 
+   With the "7 Example" function, the current content of these directories will be saved under "SaveMetaInstall", the new content is copied from github to the metadriver installation. Finally, all content from the "SaveMetaInstall" is restored there as well, not overwriting any files.  
+  So, if you just use custom drivers that are delivered by the metadriver package, you can refresh these drivers with thia function.
+  
+SILENT MODE: (Not implemented yet).
+The installer can be started with a number of arguments to automate functions without displaying the menu's:
+--Silent_Install: This will execute functions 1, 2 and S, resulting in a fully installed host, but without refreshing the "activated" and "deactivated" directories.
+--Silent_Install_Refresh: This will execute functions 1, 2, 7 and S, resulting in a fully installed host, with refreshing the "activated" and "deactivated" directories.
+--List_Packages: This will return an overview of all required packages with their install-status and -version (format: JSON).

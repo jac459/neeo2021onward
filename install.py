@@ -4,6 +4,8 @@ import os
 import apt
 import subprocess
 import re
+import shutil
+import datetime
 
 InstalledCheckingVersion = 10
 InstalledAndOK = 0
@@ -34,15 +36,13 @@ BuildNodeRedORMQTTPhase = -1
 #===============================================================================
 
 
-def CheckPackageInstalled(ThisPackage,ThisType):
+def CheckAPTPackageInstalled(ThisPackage,ThisType):
 
-    PackageCache.open()
     try:
        pkg = PackageCache[ThisPackage]
     except KeyError:
        PackageCache.close()
        return ""
-
     if pkg.is_installed:
         try: 
             inst_ver = pkg.installed.version
@@ -51,7 +51,6 @@ def CheckPackageInstalled(ThisPackage,ThisType):
     else:
         return ""
 
-    PackageCache.close()
     return inst_ver
 
 def GetMyPackageFields(GetPKG):
@@ -71,9 +70,16 @@ def TestPackages_OK(Phase):
     CheckedDependenciesAlready = True
     AllDepsOK = True
     ChangedDir = False                                          # assume we'll stay in the current directory
+
+    print("") 
+    print("Checking installation status of all packages, this may take a while")
+    print("") 
+
+    PackageCache.open()
+
     for pkg in MyPackages:
        if pkg['type']  == PackageTypeAPT:
-          Installed = CheckPackageInstalled(pkg['name'],pkg['type'])
+          Installed = CheckAPTPackageInstalled(pkg['name'],pkg['type'])
           if Installed != "":
              pkg['status'] = InstalledCheckingVersion		#Signal package is installed
              VersionOnly = re.match(r'^[0-9.:]*',Installed)
@@ -83,6 +89,9 @@ def TestPackages_OK(Phase):
              else:
                   Installed=VersionOnly[0]
              pkg['installedversion'] = Installed.strip()
+          else:
+             AllDepsOK = False
+             continue
        elif pkg['type'] == PackageTypeNPM:
           if " -g " in pkg['APTParm']:
              doglob = " -g "
@@ -91,7 +100,7 @@ def TestPackages_OK(Phase):
              ChangedDir = True                                # We need to leave the current directory, so we can see if package is installed locally there
              os.chdir(OriginalHomeDir+"/"+pkg['loc'])
 
-          NPMListCMD = "npm list "+ doglob+" | grep -i " + pkg['name']+"@ 1>" + LogDir + "/BackgroundNPMList.txt"
+          NPMListCMD = "npm list "+ doglob+" 2>/dev/null| grep -i " + pkg['name']+"@ 1>" + LogDir + "/BackgroundNPMList.txt "
           Response = subprocess.call(NPMListCMD,shell=True)
           if Response == 0:  # success for npm list
              fp =  open(LogDir + '/BackgroundNPMList.txt')
@@ -102,6 +111,7 @@ def TestPackages_OK(Phase):
              pkg['installedversion']  = MyVersion[1].strip()
           else:
              AllDepsOK = False
+             continue
              #return "@"  # signal somethiong is wrong with the main menu
 
        if  pkg['installedversion'] < pkg['versionreq'].strip():
@@ -111,6 +121,7 @@ def TestPackages_OK(Phase):
            pkg['status'] = InstalledAndOK                   #Signal package is installed with correct version
     if ChangedDir:
         os.chdir(CurrDir)
+    PackageCache.close()
     return AllDepsOK
 
 def CheckDependencies(Phase):
@@ -133,8 +144,7 @@ def DisplayPrimaryMenu():
              " --cancel-button Finish --ok-button Select "
     if CheckedDependenciesAlready == False:
        DoWhip += "'1 Check' 'Check packages'    \
-             '7 Simple' 'Simply install all of the above'  \
-             'P Preferences' 'Display/change user preferences'  \
+             '7 examples' 'Refresh examples in Activated directory'  \
              'X Exit' 'Exit the program'  2>" + LogDir + "/Mainmenu.txt"
     else:
        DoWhip += "'1 Check' 'Check packages'   \
@@ -142,7 +152,6 @@ def DisplayPrimaryMenu():
              '7 examples' 'Refresh examples in Activated directory'  \
              'S Startup' 'Create autostart for nodered'  \
              '8 Simple' 'Simply install all of the above'  \
-             'P Preferences' 'Display/change user preferences'  \
              'X Exit' 'Exit the program'   \
              2>" + LogDir + "/Mainmenu.txt"
     Response = subprocess.call(DoWhip,shell=True)
@@ -280,9 +289,6 @@ def Do_Check_dependencies():
     TestPackages_OK(0)
     ShowPackageStatus()
 
-def Do_PreferencesMenu():
-    print("We are going to setup some preferences")
-
 def HandleChoice(i):
     switcher = {
             "1": lambda: Do_Check_dependencies(),
@@ -290,9 +296,7 @@ def HandleChoice(i):
             "7": lambda: Do_Refresh_NEEOCustom(),
             "8": lambda: Do_It_All(),
             "s": lambda: Do_SetupServiceNodeRed(),
-            "S": lambda: Do_SetupServiceNodeRed(),   
-            "p": lambda: Do_PreferencesMenu(),
-            "P": lambda: Do_PreferencesMenu(),
+            "S": lambda: Do_SetupServiceNodeRed(),
             "x": lambda: Do_Exit(0),
             "X": lambda: Do_Exit(0)
         }
@@ -313,12 +317,66 @@ def Do_SetupServiceNodeRed():
     Response = subprocess.call(DONodeRedStart,shell=True)
     print(DONodeRedStart)
 
+def Do_RenameDir(srcDir,destDir):
+    print("Rename "+srcDir+" to " +destDir)
+    try:
+        os.rename(srcDir,destDir)
+    except EnvironmentError:
+       DoError = "whiptail --title 'SAVE-Dialog' --yesno  'Error renaming old archive dikrecxtory' 8 78 "
+       subprocess.call(DoError,shell=True)
+       Do_Exit(12)
+
+def Do_GetMetaLibrariesromGithub():
+    print("Calling git to retrieve directory")
+
+def Do_SaveThisDir(MetaRefreshDir,TypeDir,SaveDir,UniqueName):
+    print("Do_SaveThisDir",MetaRefreshDir,TypeDir,SaveDir,UniqueName)
+    for file in os.listdir(MetaRefreshDir):                     # Check to see if there is an activated directory in the meta-directory.MetaActivatedDir
+                                                                  # Coming here meansYe, we have files in this  dir
+       print("We need to cleanup")  
+       if os.path.isdir(SaveDir):                                 # Check to see if Save-directory already exists (~/SaveMetaInstall)
+           print("Savedir already exists") 
+           if os.path.isdir(SaveDir+TypeDir):                    # Yes, it exists... do we have this directory ( parm TypDir = "activated" or "deactivated") in  there?
+              print("and has directory: ",TypeDir) 
+              Do_RenameDir(SaveDir+TypeDir,SaveDir+TypeDir+" "+UniqueName)   # rename it to an archive name (~/SaveMetaInstall/archive ttttmmdd : hh:mm:ss)
+           print("Renames done")
+       # Code to savenow move all fkiles/directories from activated and deactivated to savedir
+       moveAllFilesinDir(MetaRefreshDir+TypeDir,SaveDir+TypeDir)
+       return 1                                                 #Signal that data was saved
+
+    return 0
+
+def moveAllFilesinDir(srcDir, dstDir):    # Move each file to destination Directory
+    print("moveAllFilesinDir",srcDir, dstDir)
+    try:
+       shutil.move(srcDir, dstDir)
+    except Exception :
+       DoError = "whiptail --title 'SAVE-Dialog' --yesno  'Error moving to savedirectory' 8 78 "
+       subprocess.call(DoError,shell=True)
+       Do_Exit(12)
+
+def Do_SaveRefreshdDirs(MetaRefreshDir,SaveDir,UniqueName):
+    print("SaveRefreshDirs",MetaRefreshDir,SaveDir)
+    SavedDirs=[0,0]
+    SavedDirs[0]=Do_SaveThisDir(MetaRefreshDir, "activated",SaveDir,UniqueName)
+    SavedDirs[1]=Do_SaveThisDir(MetaRefreshDir, "deactivated",SaveDir,UniqueName)
+    return SavedDirs
+
+def  Do_RestoreRefreshDirs(MetaRefreshDir,SaveDir,SavedDirs):
+    print("Do_RestoreRefreshDirs",MetaRefreshDir,SaveDir,SavedDirs)
 
 def Do_Refresh_NEEOCustom():
-     print("We need to refresh 'Activated'and 'Deactivated' directories") 
-     # save the non-volatile directories 
+    print("Do_Refresh_NEEOCustom")
+    MetaRefreshDir = OriginalHomeDir+"/.meta/node_modules/@jac459/metadriver/"
 
-     # Code to save user directories
+    SaveDir =  OriginalHomeDir+"/.SaveMetaInstall/"
+
+    UniqueName = datetime.datetime.now().strftime("%Y-%m%d %H.%M.%S")                          # prepare to geta unique archive-name for directories
+
+    SavedDirs = Do_SaveRefreshdDirs(MetaRefreshDir,SaveDir,UniqueName)
+    Do_GetMetaLibrariesromGithub()
+    Do_RestoreRefreshDirs(MetaRefreshDir,SaveDir,SavedDirs)
+
 
 def Do_It_All():
     Print("Now just run through all the options.")
@@ -345,7 +403,7 @@ def DoSomeInit():
     MyUsername = os.environ['USER']
     if MyUsername!='root':
        print("please call this program with elevated rights (sudo xxx)")
-       Do_Exit(12)
+       sys.exit(12)                                               # Do_Exit() will notwork, since we do not have variable LOGDIR defined yet.
 
     OriginalUsername = os.environ['SUDO_USER']
     DoThis = "getent passwd '" + OriginalUsername + "'  | cut -d: -f3,4,6 >BackgroundGetUserProperties.txt"
