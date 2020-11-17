@@ -4,7 +4,7 @@ import os
 import apt
 import subprocess
 import re
-import shutil
+import shutil, glob
 import datetime
 
 InstalledCheckingVersion = 10
@@ -35,23 +35,18 @@ BuildNodeRedORMQTTPhase = -1
 # Define various  functions
 #===============================================================================
 
+def HandleErrorShowOutput(MyError,GiveError,FileName):
+    DoWhip = "whiptail --yesno '"+GiveError+"\nClick ok to see output containing the error' --title '"+MyError+"' 10 80"
+    if subprocess.call(DoWhip,shell=True)==False: 
+       DoWhip = "whiptail --textbox --scrolltext  '"+FileName+"'  40 80"
+       subprocess.call(DoWhip,shell=True)
 
-def CheckAPTPackageInstalled(ThisPackage,ThisType):
+def CheckDirectory(TestDir):
 
-    try:
-       pkg = PackageCache[ThisPackage]
-    except KeyError:
-       PackageCache.close()
-       return ""
-    if pkg.is_installed:
-        try: 
-            inst_ver = pkg.installed.version
-        except AttributeError:
-            inst_ver = pkg.installedVersion
+    if os.path.exists(TestDir) and os.path.isdir(TestDir):
+       return 1
     else:
-        return ""
-
-    return inst_ver
+       return 0
 
 def GetMyPackageFields(GetPKG):
 
@@ -63,6 +58,56 @@ def GetMyPackageFields(GetPKG):
     subprocess.call(DoWhip,shell=True)
     return ""
 
+def CheckAPTPackageInstalled(pkg):
+
+    try:
+       PkgC = PackageCache[pkg['name']]
+    except KeyError:
+       PackageCache.close()
+       return 0
+    if not PkgC.is_installed:
+       return 0
+
+    try: 
+         Installed_version = PkgC.installed.version
+    except AttributeError:
+         Installed_version = PkgC.installedVersion
+
+    pkg['status'] = InstalledCheckingVersion           #Signal package is installed
+    VersionOnly = re.match(r'^[0-9.:]*',Installed_version)
+    i = VersionOnly[0].find(':')
+    if i != -1:
+       Installed=VersionOnly[0][i+1:]
+    else:
+       Installed=VersionOnly[0]
+    pkg['installedversion'] = Installed.strip()
+
+    return 1
+
+def CheckNPMPackageInstalled(pkg):
+
+    if " -g " in pkg['APTParm']:
+       doglob = " -g "
+    else:
+       doglob = ""
+       if CheckDirectory(OriginalHomeDir+"/"+pkg['loc']):        #is this an existing directory?
+          os.chdir(OriginalHomeDir+"/"+pkg['loc'])               # yes, switch to the directory
+       else:
+          return 0
+
+    NPMListCMD = "npm list --no-color "+ doglob+" 2>/dev/null| grep -i " + pkg['name']+"@ 1>" + LogDir + "/BackgroundNPMList.txt "
+    Response = subprocess.call(NPMListCMD,shell=True)
+    if Response == 0:  # success for npm list
+       fp =  open(LogDir + '/BackgroundNPMList.txt')
+       Result = fp.readline()
+       fp.close()
+       pkg['status'] = InstalledCheckingVersion
+       MyVersion = Result.split('@')
+       pkg['installedversion']  = MyVersion[1].strip()
+       return 1
+    else:
+       AllDepsOK = False
+       return 0
 
 def TestPackages_OK(Phase):
     global AllDepsOK
@@ -71,56 +116,29 @@ def TestPackages_OK(Phase):
     AllDepsOK = True
     ChangedDir = False                                          # assume we'll stay in the current directory
 
-    print("") 
+    print("")
     print("Checking installation status of all packages, this may take a while")
-    print("") 
+    print("")
 
     PackageCache.open()
 
     for pkg in MyPackages:
        if pkg['type']  == PackageTypeAPT:
-          Installed = CheckAPTPackageInstalled(pkg['name'],pkg['type'])
-          if Installed != "":
-             pkg['status'] = InstalledCheckingVersion		#Signal package is installed
-             VersionOnly = re.match(r'^[0-9.:]*',Installed)
-             i = VersionOnly[0].find(':')
-             if i != -1:
-                 Installed=VersionOnly[0][i+1:]
-             else:
-                  Installed=VersionOnly[0]
-             pkg['installedversion'] = Installed.strip()
-          else:
-             AllDepsOK = False
-             continue
+          Installed = CheckAPTPackageInstalled(pkg)
        elif pkg['type'] == PackageTypeNPM:
-          if " -g " in pkg['APTParm']:
-             doglob = " -g "
-          else:
-             doglob = ""
-             ChangedDir = True                                # We need to leave the current directory, so we can see if package is installed locally there
-             os.chdir(OriginalHomeDir+"/"+pkg['loc'])
+          Installed = CheckNPMPackageInstalled(pkg)
 
-          NPMListCMD = "npm list "+ doglob+" 2>/dev/null| grep -i " + pkg['name']+"@ 1>" + LogDir + "/BackgroundNPMList.txt "
-          Response = subprocess.call(NPMListCMD,shell=True)
-          if Response == 0:  # success for npm list
-             fp =  open(LogDir + '/BackgroundNPMList.txt')
-             Result = fp.readline()
-             fp.close()
-             pkg['status'] = InstalledCheckingVersion
-             MyVersion = Result.split('@')
-             pkg['installedversion']  = MyVersion[1].strip()
-          else:
-             AllDepsOK = False
-             continue
-             #return "@"  # signal somethiong is wrong with the main menu
+       if not Installed:
+          AllDepsOK = False
+          continue
 
        if  pkg['installedversion'] < pkg['versionreq'].strip():
            pkg['status'] = InstalledButNotOK                #Signal package is installed, but version is too low
            AllDepsOK = False
        else:
            pkg['status'] = InstalledAndOK                   #Signal package is installed with correct version
-    if ChangedDir:
-        os.chdir(CurrDir)
+
+    os.chdir(CurrDir)                                       #Return to the original directory , as we may have changed while testing NPM-packages
     PackageCache.close()
     return AllDepsOK
 
@@ -227,13 +245,10 @@ def InstallPackage(pkg):
        APTAddPackageCMD = "apt install -y "+ pkg['name'] + " 1>" + LogDir + "/BackgroundAPTInstall" + pkg['name'] + ".txt"
        print(APTAddPackageCMD)
        Response = subprocess.call(APTAddPackageCMD,shell=True)
-       Result = ""
-       if Response == 0:
-          fp =  open(LogDir + "/BackgroundAPTInstall" + pkg['name'] + ".txt")
-          Result = fp.readline()
-          fp.close()
+       if Response:
+          HandleErrorShowOutput("Error APT-install","Could not install package "+ pkg['name'], LogDir + "/BackgroundAPTInstall" + pkg['name'] + ".txt" )
           print("Done apt install",Result)
-       return Result
+       return Response 
 
     MyLoc = ""
     if pkg['type'] == PackageTypeNPM:   # Is this a NPM-package?
@@ -242,7 +257,7 @@ def InstallPackage(pkg):
           InstallDir = OriginalHomeDir+"/"+pkg['loc']
           MyLoc = " --prefix " + '"' + InstallDir + '"' + " "
           if os.path.isdir(InstallDir) == False:
-             DoMKDirCMD = "su -m "+ OriginalUsername + " -c 'mkdir  "  + '"' + InstallDir + '"' + " 2>"+ LogDir + "/BackgroundMkdir.txt'"
+             DoMKDirCMD = MySudo +  "'mkdir  "  + '"' + InstallDir + '"' + " 2>"+ LogDir + "/BackgroundMkdir.txt'"
              print(DoMKDirCMD)
              Response = subprocess.call(DoMKDirCMD,shell=True)
              if Response == 0:
@@ -251,21 +266,17 @@ def InstallPackage(pkg):
                 print(LineIn)
                 fp.close()
              else:
-                print("Fatal error ocurred  when creating directory for  metadriver: ",InstallDir)
+                print("Fatal error ocurred  when creating directory for  package:",pkg['name'],InstallDir)
                 Do_Exit(12)
        if pkg['APTUser'] != "":
-          APTNPMPackageCMD =  pkg['APTParm'] +  " "  +  MyLoc  + " " + pkg['APTParm2'] + "  2>" + LogDir + "/BackgroundNPM"+ pkg['name'] + ".txt"
+          APTNPMPackageCMD =  pkg['APTParm'] +  " "  +  MyLoc  + " " + pkg['APTParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall"+ pkg['name'] + ".txt"
        else:
-          APTNPMPackageCMD = "su -m "+ OriginalUsername + " -c 'export HOME="+OriginalHomeDir + "&& " +  pkg['APTParm'] +  " "  +  MyLoc  + " " + pkg['APTParm2'] + "  2>" + LogDir + "/BackgroundNPM"+ pkg['name'] + ".txt'"
+          APTNPMPackageCMD = MySudo + "export HOME="+OriginalHomeDir + "&& " +  pkg['APTParm'] +  " --no-color "  +  MyLoc  + " " + pkg['APTParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall"+ pkg['name'] + ".txt'"
        print(APTNPMPackageCMD)
        Response = subprocess.call(APTNPMPackageCMD,shell=True)
-       Result = ""
-       if Response == 0:
-          fp =  open(LogDir + "/BackgroundNPM" + pkg['name'] + ".txt")
-          Result = fp.readline()
-          fp.close()
-          print("Done apt install",Result)
-       return Result
+       if Response:
+          HandleErrorShowOutput("Error NPM-install","Could not install package "+ pkg['name'], LogDir + "/BackgroundNPM" + pkg['name'] + ".txt" )
+       return Response
 
 def SelectPackageToInstall():
 
@@ -318,7 +329,6 @@ def Do_SetupServiceNodeRed():
     print(DONodeRedStart)
 
 def Do_RenameDir(srcDir,destDir):
-    print("Rename "+srcDir+" to " +destDir)
     try:
         os.rename(srcDir,destDir)
     except EnvironmentError:
@@ -329,17 +339,21 @@ def Do_RenameDir(srcDir,destDir):
 def Do_GetMetaLibrariesromGithub():
     print("Calling git to retrieve directory")
 
+    #git clone 'https://github.com/jac459/metadriver' -b 'master'
+
 def Do_SaveThisDir(MetaRefreshDir,TypeDir,SaveDir,UniqueName):
     print("Do_SaveThisDir",MetaRefreshDir,TypeDir,SaveDir,UniqueName)
     for file in os.listdir(MetaRefreshDir):                     # Check to see if there is an activated directory in the meta-directory.MetaActivatedDir
                                                                   # Coming here meansYe, we have files in this  dir
-       print("We need to cleanup")  
+       print("We need to cleanup")
        if os.path.isdir(SaveDir):                                 # Check to see if Save-directory already exists (~/SaveMetaInstall)
-           print("Savedir already exists") 
+           print("Savedir already exists")
            if os.path.isdir(SaveDir+TypeDir):                    # Yes, it exists... do we have this directory ( parm TypDir = "activated" or "deactivated") in  there?
-              print("and has directory: ",TypeDir) 
+              print("and has directory: ",TypeDir)
               Do_RenameDir(SaveDir+TypeDir,SaveDir+TypeDir+" "+UniqueName)   # rename it to an archive name (~/SaveMetaInstall/archive ttttmmdd : hh:mm:ss)
            print("Renames done")
+       else:
+           os.mkdir(SaveDir, mode=0o755 )
        # Code to savenow move all fkiles/directories from activated and deactivated to savedir
        moveAllFilesinDir(MetaRefreshDir+TypeDir,SaveDir+TypeDir)
        return 1                                                 #Signal that data was saved
@@ -347,7 +361,6 @@ def Do_SaveThisDir(MetaRefreshDir,TypeDir,SaveDir,UniqueName):
     return 0
 
 def moveAllFilesinDir(srcDir, dstDir):    # Move each file to destination Directory
-    print("moveAllFilesinDir",srcDir, dstDir)
     try:
        shutil.move(srcDir, dstDir)
     except Exception :
@@ -362,7 +375,7 @@ def Do_SaveRefreshdDirs(MetaRefreshDir,SaveDir,UniqueName):
     SavedDirs[1]=Do_SaveThisDir(MetaRefreshDir, "deactivated",SaveDir,UniqueName)
     return SavedDirs
 
-def  Do_RestoreRefreshDirs(MetaRefreshDir,SaveDir,SavedDirs):
+def Do_RestoreRefreshDirs(MetaRefreshDir,SaveDir,SavedDirs):
     print("Do_RestoreRefreshDirs",MetaRefreshDir,SaveDir,SavedDirs)
 
 def Do_Refresh_NEEOCustom():
@@ -399,7 +412,7 @@ def DoSomeInit():
     global InstallDir
     global LogDir
     global CurrDir
-
+    global MySudo 
     MyUsername = os.environ['USER']
     if MyUsername!='root':
        print("please call this program with elevated rights (sudo xxx)")
@@ -422,9 +435,9 @@ def DoSomeInit():
 
     CurrDir = os.getcwd()                                        #what's the current directory
     LogDir =  CurrDir +  "/log"
-
+    MySudo =  "su -m "+ OriginalUsername + " -c '"
     if os.path.isdir(LogDir) == False:                           # Check to see if LOG-directory already exists (~/log)
-       DoNPMCMD = "su -m "+ OriginalUsername + " -c 'mkdir  "  + '"' + LogDir + '"' + " 2>BackgroundMkdir.txt'"   # No, so create it
+       DoNPMCMD = MySudo + "mkdir  "  + '"' + LogDir + '"' + " 2>BackgroundMkdir.txt'"   # No, so create it
        Response = subprocess.call(DoNPMCMD,shell=True)
        if Response == 0:
           fp =  open('BackgroundMkdir.txt')
