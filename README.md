@@ -23,7 +23,7 @@ C) Still in progress, but firmware is being prepared that already contains a (la
 
 Area A) now allows to run custom device drivers on the Brain itself, where we needed extra hardware before. 
 This extra hardware was normally a Raspberry PI, or a virtualized Linux system.
-The Brain's hardware (based on an Allwinner A20 cpu) is complex but not really powerful, but since most custom drivers don't need many resources, it's a nice way to reduce extra hardware.
+The Brain's hardware (based on an Allwinner A20 cpu) is complex but not really powerful, but since most custom drivers don't need many resources, it's a nice way to reduce extra hardware. (By the way, the remote runs on an STM32F429)
 
 Area B) allows for backing up of the settings and installed custom drivers.
 
