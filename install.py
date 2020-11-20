@@ -494,7 +494,7 @@ def Do_MoveDirs(SrcDir,DestDir,ReplaceParm):
     Do_MoveThisDir(SrcDir, "activated",DestDir,ReplaceParm)
     Do_MoveThisDir(SrcDir, "deactivated",DestDir,ReplaceParm)
 
-def Do_Refresh_NEEOCustom():
+def Do_Refresh_NEEOCustom(Silent):
 
     global SaveDir 
     print("Do_Refresh_NEEOCustom")
