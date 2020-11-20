@@ -24,9 +24,9 @@ MyPackages =  [
               {"name":"nodejs","type":PackageTypeAPT,"reqvers": "10.21.0","status":NotInst,"Inst_Vers":"", "CMDLine": "nodejs --version","loc":"", "PKGParm":"","PKGParm2":"","PackageUSER":"","mydep":{},"startcmd":{}},
               {"name":"npm","type":PackageTypeAPT,"reqvers": "5.8.0","status":NotInst,"Inst_Vers":"", "CMDLine": "npm --version","loc":"", "PKGParm":"","PKGParm2":"","PackageUSER":"","mydep":{},"startcmd":{}},
               {"name":"pm2","type":PackageTypeNPM,"reqvers": "","status":NotInst,"Inst_Vers":"", "CMDLine": "node-red list","phaserequired":1,"loc": "", "PKGParm":"npm install -g pm2 ","PKGParm2":"","PackageUSER":"root","mydep":{"npm"},"startcmd":{"pm2 save","pm2 startup"}},
-              {"name":"nodered","type":PackageTypeAPT,"reqvers": "","status":NotInst,"Inst_Vers":"", "CMDLine": "node-red list","phaserequired":1,"loc": "", "PKGParm":"","PKGParm2":"","PackageUSER":"","mydep":{"nodejs","npm"},"startcmd":{"pm2 start /usr/bin/node-red -f --node-args='--max-old-space-size=128' --  -v --uid 1000"}},
-              {"name":"mosquitto","type":PackageTypeAPT,"reqvers": "","status":NotInst,"Inst_Vers":"", "CMDLine": "node-red list","phaserequired":1,"loc": "", "PKGParm":"","PKGParm2":"","PackageUSER":"","mydep":{},"startcmd":{"systemctl stop mosquitto","systemctl disable mosquitto","pm2 start mosquitto -f -- -v --uid 1000"}},
-              {"name":"meta","type":PackageTypeNPM,"reqvers": "","status":NotInst,"Inst_Vers":"", "CMDLine": "node-red list","phaserequired":1,"loc": ".meta", "PKGParm":"npm install ","PKGParm2":"jac459/metadriver","PackageUSER":"","mydep":{"npm","git","pm2"},"startcmd":{"pm2 start .meta/node_modules/@jac459/metadriver/meta.js -f --uid 1000"  }}
+              {"name":"nodered","type":PackageTypeAPT,"reqvers": "","status":NotInst,"Inst_Vers":"", "CMDLine": "node-red list","phaserequired":1,"loc": "", "PKGParm":"","PKGParm2":"","PackageUSER":"","mydep":{"nodejs","npm"},"startcmd":{"pm2 start /usr/bin/node-red -f --node-args='--max-old-space-size=128' --  -v"}},
+              {"name":"mosquitto","type":PackageTypeAPT,"reqvers": "","status":NotInst,"Inst_Vers":"", "CMDLine": "node-red list","phaserequired":1,"loc": "", "PKGParm":"","PKGParm2":"","PackageUSER":"","mydep":{},"startcmd":{"systemctl stop mosquitto","systemctl disable mosquitto","pm2 start mosquitto -f -- -v  "}},
+              {"name":"meta","type":PackageTypeNPM,"reqvers": "","status":NotInst,"Inst_Vers":"", "CMDLine": "node-red list","phaserequired":1,"loc": ".meta", "PKGParm":"npm install ","PKGParm2":"jac459/metadriver","PackageUSER":"","mydep":{"npm","git","pm2"},"startcmd":{"pm2 start .meta/node_modules/@jac459/metadriver/meta.js -f" }}
               ]
 
 InstalledCheckingVersion = 10
@@ -276,7 +276,7 @@ def DoAPTUpdate():
 def InstallPackageAPT(pkg):
     global PackageCache
 
-    APTAddPackageCMD = "sudo apt install -y "+ pkg['name'] + " 1>" + LogDir + "/BackgroundAPTInstall" + pkg['name'] + ".txt"
+    APTAddPackageCMD = "apt install -y "+ pkg['name'] + " 1>" + LogDir + "/BackgroundAPTInstall" + pkg['name'] + ".txt"
     print(APTAddPackageCMD)
     Response = subprocess.call(APTAddPackageCMD,shell=True)
     if Response:
@@ -298,16 +298,16 @@ def InstallPackageNPM(pkg):
           InstallDir = OriginalHomeDir+"/"+pkg['loc']
           MyLoc = " --prefix " + '"' + InstallDir + '"' + " "
           if os.path.isdir(InstallDir) == False:
-             DoMKDirCMD =   "mkdir  "  + '"' + InstallDir + '"' + " 2>"+ LogDir + "/BackgroundMkdir.txt"
+             DoMKDirCMD = MySudo +  "mkdir  "  + '"' + InstallDir + '"' + " 2>"+ LogDir + "/BackgroundMkdir.txt'"
              Response = subprocess.call(DoMKDirCMD,shell=True)
              if Response:
                 print("Fatal error ocurred  when creating directory for  package:",pkg['name'],InstallDir)
                 Do_Exit(12)
 
-       if pkg['PackageUSER'].lower() == "root":
-          APTNPMPackageCMD = "sudo "+  pkg['PKGParm'] +  " "  +  MyLoc  + " " + pkg['PKGParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall"+ pkg['name'] + ".txt"
+       if pkg['PackageUSER'] != "":
+          APTNPMPackageCMD =  pkg['PKGParm'] +  " "  +  MyLoc  + " " + pkg['PKGParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall"+ pkg['name'] + ".txt"
        else:
-          APTNPMPackageCMD =  pkg['PKGParm'] +  " --no-color "  +  MyLoc  + " " + pkg['PKGParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall"+ pkg['name'] + ".txt"
+          APTNPMPackageCMD = MySudo + "export HOME="+OriginalHomeDir + "&& " +  pkg['PKGParm'] +  " --no-color "  +  MyLoc  + " " + pkg['PKGParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall"+ pkg['name'] + ".txt'"
 
        print(APTNPMPackageCMD)
        Response = subprocess.call(APTNPMPackageCMD,shell=True)
@@ -401,19 +401,22 @@ def HandleChoice(i,Silent=False):
     func()
 
 def Do_SetupStartups(Silent):
+    #i = 0 
     for pkg in MyPackages:
         if pkg['status'] == InstalledAndOk  and len(pkg['startcmd']) > 0:
            if not Silent:
               print("Setting up startup for",pkg['name'],": ",pkg['startcmd'])
+    #       i=i+1 
+    #       PipeFile =  LogDir + "/BackgroundSetupStart_"+ pkg['name'] + "#" + str(i)+".txt"
            PipeFile =  LogDir + "/BackgroundSetupStart_"+ pkg['name'] + ".txt"
            if  os.path.isfile(PipeFile):
                os.remove(PipeFile)                                       # remove outputfile
            for StartupCMD in pkg['startcmd']:
                DoMKDirCMD = StartupCMD +  " 1>>"+ PipeFile
-               if pkg['PackageUSER'].lower() == "root" or StartupCMD[0:9] == "systemctl":
-                  DoMKDirCMD = "sudo "+ DoMKDirCMD 
-               if not Silent:
-                  print(DoMKDirCMD)
+    #           if pkg['PackageUSER'] != "root" and StartupCMD[0:9] != "systemctl":
+    #               DoMKDirCMD = MySudo + "export HOME="+OriginalHomeDir + "&& "+ DoMKDirCMD +"'"
+                if not Silent:
+                   print(DoMKDirCMD)
                Response = subprocess.call(DoMKDirCMD,shell=True)
                if Response:
                   print("Fatal error ocurred in Startupcmd",StartupCMD,"for  package:",pkg['name'],PipeFile)
@@ -574,10 +577,10 @@ def DoSomeInit():
     global SaveDir
 
     MyUsername = os.environ['USER']
-    if MyUsername=='root':
-       print("please call this program with normal rights")
+    if MyUsername!='root':
+       print("please call this program with elevated rights (sudo xxx)")
        sys.exit(12)                                              # Do_Exit() will notwork, since we do not have variable LOGDIR defined yet.
-    OriginalUsername = os.environ['USER']
+    OriginalUsername = os.environ['SUDO_USER']
 
     CheckArgs()                                                  # Let's first check if we have optional arguments passed to us
 
@@ -600,7 +603,7 @@ def DoSomeInit():
     LogDir =  CurrDir +  "/log"
     MySudo =  "su -m "+ OriginalUsername + " -c '"
     if os.path.isdir(LogDir) == False:                           # Check to see if LOG-directory already exists (~/log)
-       DoMKDIRLog = "mkdir  "+ LogDir + " 2>BackgroundMkdirLog.txt"   # No, so create it
+       DoMKDIRLog = MySudo + "mkdir  "+ LogDir + " 2>BackgroundMkdirLog.txt'"   # No, so create it
        print(DoMKDIRLog)
        Response = subprocess.call(DoMKDIRLog,shell=True)
        if Response == 0:
