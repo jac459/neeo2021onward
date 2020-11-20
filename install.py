@@ -181,7 +181,7 @@ def DisplayPrimaryMenu():
        DoWhip += "'1 Check' 'Check packages'   \
              '2 Install' 'Install missing packages' \
              '7 examples' 'Refresh examples in Activated directory'  \
-             'S Startup' 'Create autostart for all nodered'  \
+             'S Startup' 'Create autostart for all installed packages'  \
              '8 Simple' 'Simply install all of the above'  \
              'X Exit' 'Exit the program'   \
              2>" + LogDir + "/Mainmenu.txt"
