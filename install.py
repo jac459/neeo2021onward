@@ -5,11 +5,12 @@ import os.path
 import apt
 import subprocess
 import re
-import urllib.request, json 
+import requests
 import shutil, glob
 import datetime
 import time
 import argparse
+import json
 
 InstalledCheckingVersion = 10
 InstalledAndOK = 0
@@ -624,8 +625,15 @@ def DoSomeInit():
        print("Fatal error ocurred  when accessing properties of original userid",OriginalUsername)
        Do_Exit(12)
 
-    with urllib.request.urlopen(HTTPSPackageDefinitionFile) as url:
-           MyPackages = json.loads(url.read().decode())
+    import requests
+    import urllib
+
+    MyPackageFile = "packages.yml"
+    urllib.request.urlretrieve(HTTPSPackageDefinitionFile, filename=MyPackageFile)
+
+    with open(MyPackageFile) as json_file:
+        MyPackages = json.load(json_file)
+
 
     SaveDir = OriginalHomeDir+"/.SaveMetaInstall/"
     CurrDir = os.getcwd()                                        #what's the current directory
