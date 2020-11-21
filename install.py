@@ -5,6 +5,7 @@ import os.path
 import apt
 import subprocess
 import re
+import requests
 import shutil, glob
 import datetime
 import time
@@ -19,15 +20,8 @@ PackageTypeUnknown = 0
 PackageTypeAPT = 1
 PackageTypeNPM = 2
 PackageTypeManual = 3
-nMyPackages =  [
-              {"name":"git","type":PackageTypeAPT,"reqvers": "2.20.1","status":NotInst,"Inst_Vers":"","CMDLine":"git --version","loc":"", "PKGParm":"","PKGParm2":"","PackageUSER":"","PackageUSER":"","mydep":{},"startcmd":{}},
-              {"name":"nodejs","type":PackageTypeAPT,"reqvers": "10.21.0","status":NotInst,"Inst_Vers":"", "CMDLine": "nodejs --version","loc":"", "PKGParm":"","PKGParm2":"","PackageUSER":"","mydep":{},"startcmd":{}},
-              {"name":"npm","type":PackageTypeAPT,"reqvers": "5.8.0","status":NotInst,"Inst_Vers":"", "CMDLine": "npm --version","loc":"", "PKGParm":"","PKGParm2":"","PackageUSER":"","mydep":{},"startcmd":{}},
-              {"name":"pm2","type":PackageTypeNPM,"reqvers": "","status":NotInst,"Inst_Vers":"", "CMDLine": "node-red list","phaserequired":1,"loc": "", "PKGParm":"npm install -g pm2 ","PKGParm2":"","PackageUSER":"root","mydep":{"npm"},"startcmd":{"pm2 save","pm2 startup"}},
-              {"name":"nodered","type":PackageTypeAPT,"reqvers": "","status":NotInst,"Inst_Vers":"", "CMDLine": "node-red list","phaserequired":1,"loc": "", "PKGParm":"","PKGParm2":"","PackageUSER":"","mydep":{"nodejs","npm"},"startcmd":{"pm2 start /usr/bin/node-red -f --node-args='--max-old-space-size=128' --  -v --uid 1000"}},
-              {"name":"mosquitto","type":PackageTypeAPT,"reqvers": "","status":NotInst,"Inst_Vers":"", "CMDLine": "node-red list","phaserequired":1,"loc": "", "PKGParm":"","PKGParm2":"","PackageUSER":"","mydep":{},"startcmd":{"systemctl stop mosquitto","systemctl disable mosquitto","pm2 start mosquitto -f -- -v--uid 1000  "}},
-              {"name":"meta","type":PackageTypeNPM,"reqvers": "","status":NotInst,"Inst_Vers":"", "CMDLine": "node-red list","phaserequired":1,"loc": ".meta", "PKGParm":"npm install ","PKGParm2":"jac459/metadriver","PackageUSER":"","mydep":{"npm","git","pm2"},"startcmd":{"pm2 start .meta/node_modules/@jac459/metadriver/meta.js -f --uid 1000" }}
-              ]
+HTTPSMetaDriver="https://github.com/jac459/metadriver"
+HTTPSPackageDefinitionFile="https://raw.githubusercontent.com/jac459/neeo2021onward/main/packages.yml"
 MyPackages = []
 InstalledCheckingVersion = 10
 PKGNPMIndex = -1
@@ -432,7 +426,7 @@ def Do_GetMetaLibrariesfromGithub():
     GitDir = OriginalHomeDir+"/GIT "+ UniqueName
     os.mkdir(GitDir, mode=0o755 )
 
-    DoGetGit = "git clone 'https://github.com/jac459/metadriver' -b 'master' '" + GitDir +"' 2>"+  LogDir + "/BackgroundGitCone.txt"
+    DoGetGit = "git clone '"+ HTTPSMetaDriver + "' -b 'master' '" + GitDir +"' 2>"+  LogDir + "/BackgroundGitCone.txt"
     print(DoGetGit)
     Response = subprocess.call(DoGetGit,shell=True)
     if Response:
@@ -580,13 +574,15 @@ def DoSomeInit():
        print("Fatal error ocurred  when accessing properties of original userid",OriginalUsername)
        Do_Exit(12)
 
-    PackageDefinitions = "packages.yml"
-    if not os.path.exists(PackageDefinitions):
-       print("Missing package definitions fie:'packages.yml, see github")
-       sys.exit(12)
+    import requests
+    import urllib
 
-    with open(PackageDefinitions) as json_file:
+    MyPackageFile = "packages.yml"
+    urllib.request.urlretrieve(HTTPSPackageDefinitionFile, filename=MyPackageFile)
+
+    with open(MyPackageFile) as json_file:
         MyPackages = json.load(json_file)
+
 
     SaveDir = OriginalHomeDir+"/.SaveMetaInstall/"
     CurrDir = os.getcwd()                                        #what's the current directory
