@@ -21,7 +21,8 @@ sudo apt purge npm/stable
 sudo apt update
 sudo apt install nodejs
 sudo apt install npm
-
+sudo apt remove nodered
+sudo apt purge nodered
 
 That should do it, you now have the correct version of the required packages
 AND you can  now install nodered through the installer (install.py).
