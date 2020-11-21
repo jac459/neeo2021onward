@@ -118,3 +118,13 @@ A. Yes you can. You need to have the IR-code in global cache format. This is an
 
 example:
 http://192.168.1.2:3000/irblaster/send_ir?code=sendir,1:1,1,38000,3,1,152,155,19,78,19,78,19,78,19,78,19,39,19,39,19,78,19,39,19,78,19,39,19,78,19,39,19,39,19,41,18,39,19,39,19,78,19,78,19,39,19,78,19,40,19,78,19,39,19,78,19,330
+
+Q. My remote keeps saying "Reconnecting" with a spoinning circle, what can I do?
+A. The remote probably has problems connecting to your wifi. DO the following:
+1. Hold the power button on the NEEO Remote for 15 seconds
+2. Wait a few seconds
+3. Press the power & mute button simultaneously for a few seconds
+4. You should see the option for recovery, follow the on-screen steps.
+You will now getbthe option to go into recovery mode (by pressing the menu button).
+The remote will do some initalization, then tells you that it needs your help, and to place the remote close to the brain.
+Press the black plastic cover on the Brain for 8 seconds, then the remotre will pair with the Brain and receive the new wifi-credentials. That should help you.
