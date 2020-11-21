@@ -33,12 +33,19 @@ BuildNodeRedORMQTTPhase = -1
 # Define various  functions
 #===============================================================================
 
+#DOC: HandleErrorShowOutput routine
+#--> This routine is called when something goes wrong and you want the user to alert and allow the user to review the output of a backgroundcommand 
+#--> Input is 3 valuesa: 1): Title, 2) eerrortext, 3) File to showTextInout is the package-name                          
+#--> Output is the entire json/array entry
 def HandleErrorShowOutput(MyError,GiveError,FileName):
     DoWhip = "whiptail --yesno '"+GiveError+"\nClick ok to see output containing the error' --title '"+MyError+"' 10 80"
     if subprocess.call(DoWhip,shell=True)==False: 
        DoWhip = "whiptail --textbox --scrolltext  '"+FileName+"'  40 80"
        subprocess.call(DoWhip,shell=True)
 
+
+#DOC: CheckDirectory routine
+#--> Simple routine  that checks if a file exists and is indeed a directory 9not a file)
 def CheckDirectory(TestDir):
 
     if os.path.exists(TestDir) and os.path.isdir(TestDir):
@@ -46,6 +53,10 @@ def CheckDirectory(TestDir):
     else:
        return 0
 
+#DOC: GetMyPackageFields routine
+#--> This routine gets the part of the jsan PAckage definitions for a specific package
+#--> Inout is the package-name
+#--> Output is the entire json/array entry
 def GetMyPackageFields(GetPKG):
 
     for pkg in MyPackages:
@@ -56,6 +67,10 @@ def GetMyPackageFields(GetPKG):
     subprocess.call(DoWhip,shell=True)
     return ""
 
+#DOC: CheckAPTPackageInstalled routine
+#--> Low level routine that checks the status of an APT package
+#--> It just looks up the package name in the APT-cache.
+#--> If it installed, it will determine the version that is installed
 def CheckAPTPackageInstalled(pkg):
 
     try:
@@ -82,6 +97,10 @@ def CheckAPTPackageInstalled(pkg):
 
     return 1
 
+#DOC: CheckNPMPackageInstalled routine
+#--> Low level routine that checks the status of an NPM  package
+#--> If it is a local package (no -g in its install-cmd), it switches to the local directory where the package should be
+#--> then it calls npm list against the package
 def CheckNPMPackageInstalled(pkg):
 
     if " -g " in pkg['PKGParm']:
@@ -107,6 +126,11 @@ def CheckNPMPackageInstalled(pkg):
        AllDepsOK = False
        return 0
 
+#DOC:  TestThisPackage_OK
+#--> mid level routine that checks the status of all packages
+#--> It only functio0ns as a switch between APT and NPM-packages
+#--> The one real thing that happens here is  that it will set AllDepsOK to False if an installation fails.
+#--> No further logic. 
 def TestThisPackage_OK(pkg):
 
        if pkg['status'] == InstalledAndOK:
@@ -128,6 +152,10 @@ def TestThisPackage_OK(pkg):
        else:
            pkg['status'] = InstalledAndOK                   #Signal package is installed with correct version
 
+#DOC: TestPackages_OK routine
+#--> High level routine that checks the status of all packages
+#--> It opens a cache for APT, to speed up verification 
+#--> Then it goes over all packages and calls a subroutine to check that specific package
 def TestPackages_OK(Silent = False):
     global AllDepsOK
     global CheckedDependenciesAlready
@@ -148,21 +176,14 @@ def TestPackages_OK(Silent = False):
     PackageCache.close()
     return AllDepsOK
 
-def CheckDependencies(Phase):
-    AllPAckagesForThisPhaseAreOK = True
-    for pkg in MyPackages:
-       if pkg['phaserequired']  <= Phase:
-          if pkg['status']  !=  InstalledAndOK:
-             AllPAckagesForThisPhaseAreOK = False
-
-    return AllPAckagesForThisPhaseAreOK
-
+#DOC: DisplayPrimaryMenu routine
+#--> The main menu routine, displays options available in this phase of execution of the installer.
+#--> Initially, opnly a small set pf functions is available
+#--> As sopon as the installer has checked which packages are installed,all options become available. 
+#--> No Silent-mode
 def DisplayPrimaryMenu():
     global CheckedDependenciesAlready
     global AllDepsOK
-    WT_HEIGHT =  20
-    WT_WIDTH  = 40
-    WT_MENU_HEIGHT = 12
 
     if CheckedDependenciesAlready == False:
        DoWhip = "whiptail --title 'Raspberry pi configurator for NEEO' --menu '"
@@ -217,26 +238,12 @@ def DisplayPrimaryMenu():
        Do_Exit(0)
        return "@"  # signal somethiong is wrong with the main menu
 
-def ShowPackageStatus():
+#DOC: Do_Install_dependencies routine
+#--> High level install-routine 
+#--> Presents select menu with all packages that are not yet installed and on the correct level. User can then select which packages to install.
+#--> In case of Silent install, it just selects all packages that need to be installed/updated.
 
-    DoWhip = "whiptail --title 'Overview status of dependencies'  --msgbox "
-    for pkg in MyPackages:
-       Content = "' Required: " + pkg['name'] + " " + pkg['reqvers']
-       Content = Content.ljust(35, ' ')
-       if pkg['type'] ==  PackageTypeAPT:
-          Content += " APT "
-       elif  pkg['type'] ==  PackageTypeNPM:
-          Content += " NPM "
-       if  pkg['status']  == InstalledAndOK:
-           Content += "Found:  "+ pkg['Inst_Vers']  + " --> OK\n'"
-       elif  pkg['status'] == InstalledButNotOK:
-           Content += "Found:  " + pkg['Inst_Vers'] + " --> Version is too low\n'"
-       else:
-           Content +=  "Not found --> Need to install\n'"
-       DoWhip +=  Content
-    DoWhip +=  " 25 80 70 "
-    subprocess.call(DoWhip,shell=True)
-
+#--> Sewcond phase is to call the installation routine to verify dependencies and install package 
 def Do_Install_dependencies(Silent):
 
     if Silent:
@@ -253,7 +260,7 @@ def Do_Install_dependencies(Silent):
     for ThisPackage in DoThis.split('"'):
         if ThisPackage.strip() != "":
            pkg = GetMyPackageFields(ThisPackage.strip())        # lookup extra parms, now we only have the name of the pac kage, not the actual array
-           InstallPackage(pkg)                                  # install the package
+           InstallPackage(pkg,Silent)                                  # install the package
            PackageCache.update()
 
 def DoAPTUpdate():
@@ -266,11 +273,15 @@ def DoAPTUpdate():
        #print("Did an apt update",Result) 
        return 
 
-def InstallPackageAPT(pkg):
+#DOC: InstallPackageAPT routine
+#--> Low level install-routine for APT-packages only 
+#--> Handles Dependency checking and if all are okay, calls ther actual APT- or NPM-install routine.def InstallPackageAPT(pkg,Silent):
+#--> Always uses root (we run as root, so it does not lower it's access-rights)
     global PackageCache
 
     APTAddPackageCMD = "apt install -y "+ pkg['name'] + " 1>" + LogDir + "/BackgroundAPTInstall" + pkg['name'] + ".txt"
-    print(APTAddPackageCMD)
+    if not Silent:
+       print(APTAddPackageCMD)
     Response = subprocess.call(APTAddPackageCMD,shell=True)
     if Response:
        HandleErrorShowOutput("Error APT-install","Could not install package "+ pkg['name'], LogDir + "/BackgroundAPTInstall" + pkg['name'] + ".txt" )
@@ -283,10 +294,14 @@ def InstallPackageAPT(pkg):
 
     return Response 
 
-def InstallPackageNPM(pkg):
+#DOC: InstallPackageNPM routine
+#--> Low level install-routine for NPM-packages only 
+#--> Handles Dependency checking and if all are okay, calls ther actual APT- or NPM-install routine.
+#--> Uses root (we run as root, so it does not lower it's access-rights) if it is a globally installed package (-g parm), otherwise lowers rights first to original userid
+def InstallPackageNPM(pkg,Silent):
 
        MyLoc = ""
-       if pkg['loc'] != "":              # Do we need to insyall it on a specific location?
+       if pkg['loc'] != "":              # Do we need to install it on a specific location?
           print("Checking custom location now",pkg['loc'])
           InstallDir = OriginalHomeDir+"/"+pkg['loc']
           MyLoc = " --prefix " + '"' + InstallDir + '"' + " "
@@ -302,7 +317,8 @@ def InstallPackageNPM(pkg):
        else:
           APTNPMPackageCMD = MySudo + "export HOME="+OriginalHomeDir + "&& " +  pkg['PKGParm'] +  " --no-color "  +  MyLoc  + " " + pkg['PKGParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall"+ pkg['name'] + ".txt'"
 
-       print(APTNPMPackageCMD)
+       if not Silent:
+          print(APTNPMPackageCMD)
        Response = subprocess.call(APTNPMPackageCMD,shell=True)
 
        if Response:
@@ -310,7 +326,10 @@ def InstallPackageNPM(pkg):
        TestThisPackage_OK(pkg)                     # Refresh status of this package 
        return Response
 
-def InstallPackage(pkg):
+#DOC: InstallPackage routine
+#--> High level install-routine 
+#--> hHandles Dependency checking and if all are okay, calls ther actual APT- or NPM-install routine.
+def InstallPackage(pkg,Silent):                           # High level install-routine;  handles Dependency checking and if all are okay, calls ther actual APT- or NPM-install routine.
     global DidAPTUpdate
     InstalledSomething = False
     if DidAPTUpdate == False:
@@ -335,11 +354,13 @@ def InstallPackage(pkg):
               return
 
     if pkg['type'] == PackageTypeAPT:   #Is this an APT-package?
-       Response =  InstallPackageAPT(pkg)
+       Response =  InstallPackageAPT(pkg,Silent)
     elif pkg['type'] == PackageTypeNPM:   #Is this an NPM-package?
-       Response =  InstallPackageNPM(pkg)
+       Response =  InstallPackageNPM(pkg,Silent)
 
-def SelectPackageToInstall():
+#DOC: SelectPackageToInstall 
+#--> "Gui" that shows packages that need to be installed or updated 
+def SelectPackageToInstall():             
 
     DoWhip = "whiptail --title 'Install dependencies'   --checklist  'Select packages you want to be installed'  25 78 15 "
     MyIndex = 0
@@ -357,11 +378,15 @@ def SelectPackageToInstall():
        fp.close()
        return Choice
 
+#DOC: Do_Check_dependencies
+#--> A bit of an empty shell. It just calls TestPackages_OK
+#--> It's here to follow the naming conventions from the primary menu. 
 def Do_Check_dependencies(Silent):
-    TestPackages_OK()
-    #if not Silent:
-    #   ShowPackageStatus()
+    TestPackages_OK(Silent)
 
+
+#DOC: Do_ListDependencies
+#--> Processor for  the --List argument: Silently print what packages are installed and what versions 
 def Do_ListDependencies(Silent):
 
     TestPackages_OK(Silent)
@@ -376,6 +401,8 @@ def Do_ListDependencies(Silent):
 
     print(json.dumps(data,sort_keys=True, indent=4, separators=(',', ': ')))
 
+#DOC: HandleChoice
+#-->  Checks what is selectyed on the primary menu and call the corresponding function 
 def HandleChoice(i,Silent=False):
     switcher = {
             "1": lambda: Do_Check_dependencies(Silent),
@@ -393,6 +420,8 @@ def HandleChoice(i,Silent=False):
     func = switcher.get(i[0], lambda: 'Invalid')
     func()
 
+#DOC: Do_SetupStartups
+#-->  Routine for creating startup parameters for the installed packages
 def Do_SetupStartups(Silent):
 
     for pkg in MyPackages:
@@ -411,6 +440,8 @@ def Do_SetupStartups(Silent):
                   print("Fatal error ocurred in Startupcmd",StartupCMD,"for  package:",pkg['name'],PipeFile)
                   Do_Exit(12)
 
+#DOC: Do_RenameDir
+#-->  A general rename directory routine
 def Do_RenameDir(srcDir,destDir):
     try:
         os.rename(srcDir,destDir)
@@ -419,6 +450,8 @@ def Do_RenameDir(srcDir,destDir):
        subprocess.call(DoError,shell=True)
        Do_Exit(12)
 
+#DOC: Do_GetMetaLibrariesfromGithub 
+#-->  Routine to download the entire metadriver from github; only 2 directories are used however by routines following this one: activated and deactivated
 def Do_GetMetaLibrariesfromGithub():
 
     UniqueName = datetime.datetime.now().strftime("%Y-%m%d %H.%M.%S")                          # prepare to geta unique archive-name for directories
@@ -434,6 +467,9 @@ def Do_GetMetaLibrariesfromGithub():
        return ""
     return GitDir+"/"
 
+#DOC: Do_Copy
+#-->  General purpose routine that copies a source-directory (and subdirectories) to a destination.
+#-->  Once copied, it removes the entire tree from sourcdir
 def Do_Copy(src, dst, symlinks=False, ignore=None):
     print("Do_Copy %s %s",src,dst)
     if not os.path.exists(dst):
@@ -447,6 +483,8 @@ def Do_Copy(src, dst, symlinks=False, ignore=None):
             if not os.path.exists(d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
                 shutil.copy2(s, d)
 
+#DOC: Do_MoveNoReplace
+#-->  General purpose routine that move files (and directories) from  a source-directory to a destination. It will NOT overwrite any files in the destination.
 def Do_MoveNoReplace(InSrcDir,InDestDir):
 
     print("Do_MoveNoReplace",InSrcDir, InDestDir)
@@ -461,51 +499,53 @@ def Do_MoveNoReplace(InSrcDir,InDestDir):
                #  Same file alreadcy in DestDir, don't move it.
               continue
            shutil.move(src_file, dst_dir)
- 
+
+#DOC: Do_SaveHouseKeepingThisDir
+#-->  Routine that moves files (and directories) from  a source-directory to an arc hive/staging  destination.
 def Do_SaveHouseKeepingThisDir(SrcDir,TypeDir,DestDir):
 
-    print("Do_SaveThisDir",SrcDir,TypeDir,DestDir)
     UniqueName = datetime.datetime.now().strftime("%Y-%m%d %H.%M.%S")                          # prepare to geta unique archive-name for directories
     for file in os.listdir(SrcDir+TypeDir):                       # Do we even have a meta0directory with this subdir (TypeDir: activated or deactivated)
                                                                   # Yes, now Check to see if there is an activated directory in the meta-directory.MetaActivatedDir
-       print(SrcDir,"Has folder",TypeDir,"So we need the cleanup")
        if os.path.isdir(DestDir):                                 # Check to see if Save-directory already exists (~/SaveMetaInstall)
-           print(DestDir,"already exists, no need top make it")
            if os.path.isdir(DestDir+TypeDir):                    # Yes, it exists... do we have this directory ( parm TypDir = "activated" or "deactivated") in  there?
-              print("But it already has directory: ",TypeDir,"We'll rename it") 
               Do_RenameDir(DestDir+TypeDir,DestDir+TypeDir+" "+UniqueName)   # rename it to an archive name (~/SaveMetaInstall/archive ttttmmdd : hh:mm:ss)
-           print("Rename done")
        else:
-           print("Making .#SaveMetaInstall")
            os.mkdir(DestDir, mode=0o755 )
        return 1
     return 0
 
+#DOC: Do_SaveHouseKeeping
+#-->  High level routine that moves files (and directories) from  a source-directory to an archive/staging  destination.
+#--> In essence, it's just a driver for Do_SaveHouseKeepingThisDir for both the activated and the deactivated directory
 def Do_SaveHouseKeeping(MetaDir,SaveDir):
 
-    print("SaveHousekeeping",MetaDir,SaveDir)
     Do_SaveHouseKeepingThisDir(MetaDir, "activated",SaveDir)
     Do_SaveHouseKeepingThisDir(MetaDir, "deactivated",SaveDir)
 
-
+#DOC: Do_SaveHouseKeeping
+#-->  High level routine that moves files (and directories) from  a source-directory to an archive/staging  destination.
+#-->  Here, a different routione is called if files are allowed to be overwritten or not
 def Do_MoveThisDir(SrcDir,TypeDir,DestDir,ReplaceParm):
 
-    print("Do_MoveThisDir",SrcDir,TypeDir,DestDir,ReplaceParm)
     if ReplaceParm:
        Do_Copy(SrcDir+TypeDir,DestDir+TypeDir)
     else:
        Do_MoveNoReplace(SrcDir+TypeDir,DestDir+TypeDir)
 
+#DOC: Do_MoveDirs
+#-->  High level routine that moves files (and directories) from  a source-directory to an archive/staging  destination.
+#--> In essence, it's just a driver for Do_MoveThisDir for both the activated and the deactivated directory
 def Do_MoveDirs(SrcDir,DestDir,ReplaceParm):
 
-    print("Do_MoveDirs",SrcDir,DestDir)
     Do_MoveThisDir(SrcDir, "activated",DestDir,ReplaceParm)
     Do_MoveThisDir(SrcDir, "deactivated",DestDir,ReplaceParm)
 
+#DOC: Do_Refresh_NEEOCustom
+#-->  High level routine that handles the refresh examples directories.
 def Do_Refresh_NEEOCustom(Silent):
 
     global SaveDir 
-    print("Do_Refresh_NEEOCustom")
     MetaDir = OriginalHomeDir+"/.meta/node_modules/@jac459/metadriver/"
     SaveDir = OriginalHomeDir+"/.SaveMetaInstall/"
 
@@ -519,9 +559,14 @@ def Do_Refresh_NEEOCustom(Silent):
     Do_MoveDirs(SaveDir,MetaDir,False)                                  # Next, move back all files that were saved into the neew Meta-directory, without REPLACING ANYONE  (False)
     shutil.rmtree(GitDir)
 
+#DOC: Do_It_All
+#-->  High level routine that handles the silent  --InstallAndStart
 def Do_It_All():
     Print("Now just run through all the options.")
 
+
+#DOC: SetAccessRights
+#-->  Set the access rights to the user on a couple of directories (and files in it)
 def SetAccessRights(ThisDir):
 
     for root, dirs, files in os.walk(ThisDir):
@@ -532,12 +577,18 @@ def SetAccessRights(ThisDir):
     if os.path.isdir(ThisDir):
        os.chown(ThisDir, OriginalUID,  OriginalGID)
 
+#DOC: Do_Exit
+#-->  Generic exit routine. 
+#--> Mainly used to Set accessrights good when the program somehow needs to stop (planned or not planned)
 def Do_Exit(RC):                                                        #exit, but first set  logdirectory+fils in it to original user&group
 
     SetAccessRights(LogDir)                                             #Before we say goodbye, we set accessrights on some folders to or own user
     SetAccessRights(SaveDir) 
     sys.exit(RC)
 
+#DOC: DoSomeInit
+#-->  Generic initialisation routine. 
+#--> Mainly used to Set accessrights good when the program somehow needs to stop (planned or not planned)
 def DoSomeInit():
     global OriginalUsername
     global OriginalHomeDir
@@ -596,17 +647,19 @@ def DoSomeInit():
     InstallDir = OriginalHomeDir+"/.meta"
     PackageCache  = apt.cache.Cache()
 
+#DOC:  Handle the functions initiated via command line parameters 
 def Do_Silent_Commands():
 
    if MyArgs.Install:
       HandleChoice(1,True)
 
-   if MyArgs.InstallRefresh:
+   if MyArgs.InstallAndStart:
       HandleChoice(1,True) 
 
    if  MyArgs.List:
       HandleChoice("L",True) 
 
+#DOC:  Setup parser for command line parameters 
 def CheckArgs():
 
     global MyArgs       
@@ -617,7 +670,7 @@ def CheckArgs():
         help='No menu will be displayed, just executes functions 1, 2 and S, resulting in a fully installed host, but without refreshing the "activated" and "deactivated" directories'
     )
     parser.add_argument(
-        '--InstallRefresh',
+        '--InstallAndStart',
         action='store_true',
         help='No menu will be displayed, just executes functions 1, 2 and S, resulting in a fully installed host, but without refreshing the "activated" and "deactivated" directories'
     )
@@ -641,7 +694,7 @@ if __name__ == "__main__":
    GoOn = True
    DidAPTUpdate = False
 
-   if MyArgs.Install or MyArgs.InstallRefresh  or MyArgs.List :
+   if MyArgs.Install or MyArgs.InstallAndStart  or MyArgs.List :
       Do_Silent_Commands()
       GoOn = False
 
