@@ -56,6 +56,9 @@
         "mydep": [
             "npm"
         ],
+        "delstartcmd": [
+            "pm2 unstartup"
+        ],
         "startcmd": [
             "pm2 save",
             "pm2 startup"
@@ -79,6 +82,9 @@
         ],
         "startcmd": [
             "pm2 start /usr/bin/node-red -f --node-args='--max-old-space-size=128' --  -v --uid 1000"
+        ],
+        "delstartcmd": [
+            "pm2 del node-red"
         ]
     },
     {
@@ -98,6 +104,9 @@
             "systemctl stop mosquitto",
             "systemctl disable mosquitto",
             "pm2 start mosquitto -f -- -v--uid 1000  "
+        ],
+        "delstartcmd": [
+            "pm2 del mosquitto"
         ]
     },
     {
@@ -119,6 +128,9 @@
         ],
         "startcmd": [
             "pm2 start .meta/node_modules/@jac459/metadriver/meta.js -f --uid 1000"
+        ],
+        "delstartcmd": [
+            "pm2 del meta"
         ]
     }
 ]
