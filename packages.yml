@@ -81,7 +81,7 @@
             "npm"
         ],
         "startcmd": [
-            "pm2 start /usr/bin/node-red -f --node-args='--max-old-space-size=128' --  -v --uid 1000"
+            "pm2 start /usr/bin/node-red -f --uid 1000 --node-args='--max-old-space-size=128' --  -v"
         ],
         "delstartcmd": [
             "pm2 del node-red"
@@ -103,7 +103,8 @@
         "startcmd": [
             "systemctl stop mosquitto",
             "systemctl disable mosquitto",
-            "pm2 start mosquitto -f -- -v--uid 1000  "
+            "sleep 15s",
+            "pm2 start mosquitto --uid 1000 -f -- -v"
         ],
         "delstartcmd": [
             "pm2 del mosquitto"
