@@ -429,6 +429,13 @@ def Do_SetupStartups(Silent):
         if pkg['status'] == InstalledAndOk  and len(pkg['startcmd']) > 0:
            if not Silent:
               print("Setting up startup for",pkg['name'],": ",pkg['startcmd'])
+           if len(pkg['delstartcmd']) > 0:
+              PipeFile =  LogDir + "/BackgroundDeleteStart_"+ pkg['name'] + ".txt"
+              for StartupCMD in pkg['delstartcmd']:
+                  DoMKDirCMD = StartupCMD +  " 1>>"+ PipeFile
+                  if not Silent:
+                     print(DoMKDirCMD)
+                  subprocess.call(DoMKDirCMD,shell=True)                  # no error checking, because  the package may not have been added as stratup
            PipeFile =  LogDir + "/BackgroundSetupStart_"+ pkg['name'] + ".txt"
            if  os.path.isfile(PipeFile):
                os.remove(PipeFile)                                       # remove outputfile
