@@ -21,14 +21,12 @@ PackageTypeAPT = 1
 PackageTypeNPM = 2
 PackageTypeManual = 3
 HTTPSMetaDriver="https://github.com/jac459/metadriver"
-HTTPSPackageDefinitionFile="https://raw.githubusercontent.com/jac459/neeo2021onward/main/packages.yml"
+HTTPSPackageDefinitionFile="https://raw.githubusercontent.com/jac459/neeo2021onward/main/packages.json"
 MyPackages = []
 InstalledCheckingVersion = 10
 PKGNPMIndex = -1
 PKGNodeRedIndex = -1
 InstalledAndOk = 0
-BuildMetaPhase = 0
-BuildNodeRedORMQTTPhase = -1
 
 #===============================================================================
 # Define various  functions
@@ -244,7 +242,7 @@ def DisplayPrimaryMenu():
 #--> Presents select menu with all packages that are not yet installed and on the correct level. User can then select which packages to install.
 #--> In case of Silent install, it just selects all packages that need to be installed/updated.
 
-#--> Sewcond phase is to call the installation routine to verify dependencies and install package 
+#--> Second phase is to call the installation routine to verify dependencies and install package 
 def Do_Install_dependencies(Silent):
 
     if Silent:

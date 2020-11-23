@@ -46,3 +46,30 @@ The installer can be started with a number of arguments to automate functions wi
 --Silent_Install: This will execute functions 1, 2 and S, resulting in a fully installed host, but without refreshing the "activated" and "deactivated" directories.
 --Silent_Install_Refresh: This will execute functions 1, 2, 7 and S, resulting in a fully installed host, with refreshing the "activated" and "deactivated" directories.
 --List_Packages: This will return an overview of all required packages with their install-status and -version (format: JSON).
+
+PACKAGE.JSON:
+Package.json contains all the package definitions and tells the installer how to handle each package.
+Fields in package.json:
+    {
+        "name": "nodered", <-- Name of the package as identified by apt or npm
+        "type": 1,         <-- 1 = package needs to be installed by apt, 2 means install by npm
+        "reqvers": "",     <-- the minimnal version of the package to be considered compatible
+        "status": 99,      <-- initial status mening "Not installed"; installer will check if it is installed; leave as is.
+        "Inst_Vers": "",   <-- Installed version: installer will fill this property once it checks packages
+        "CMDLine": "node-red list", 
+        "phaserequired": 1,
+        "loc": "",
+        "PKGParm": "",
+        "PKGParm2": "",
+        "PackageUSER": "",
+        "mydep": [
+            "nodejs",
+            "npm"
+        ],
+        "startcmd": [
+            "pm2 start /usr/bin/node-red -f --uid 1000 --node-args='--max-old-space-size=128' --  -v"
+        ],
+        "delstartcmd": [
+            "pm2 del node-red"
+        ]
+    },
