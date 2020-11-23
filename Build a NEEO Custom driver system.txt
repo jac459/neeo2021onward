@@ -56,20 +56,18 @@ Fields in package.json:
         "reqvers": "",     <-- the minimnal version of the package to be considered compatible
         "status": 99,      <-- initial status mening "Not installed"; installer will check if it is installed; leave as is.
         "Inst_Vers": "",   <-- Installed version: installer will fill this property once it checks packages
-        "CMDLine": "node-red list", 
-        "phaserequired": 1,
-        "loc": "",
-        "PKGParm": "",
-        "PKGParm2": "",
-        "PackageUSER": "",
-        "mydep": [
+        "loc": "",         <-- The location where the package will be/is installed
+        "PKGParm": "",     <-- any partial command that is requires (on the front part) besides the normal apt install /npm install
+        "PKGParm2": "",    <-- any partial command that is requires (on the back part) besides the normal apt/npm
+        "PackageUSER": "", <-- Specify "root" if the package/cmds need to be executed as root, otherwise it will run as the original user (that started sudo) 
+        "mydep": [         <-- One or more dependencies that need to be fulfilled before installing this package      
             "nodejs",
             "npm"
         ],
-        "startcmd": [
+        "startcmd": [      <-- One or more commands that are required to setup the startup of this package
             "pm2 start /usr/bin/node-red -f --uid 1000 --node-args='--max-old-space-size=128' --  -v"
         ],
-        "delstartcmd": [
+        "delstartcmd": [   <-- One or more commands that are required before we can build startup-0environment (again)
             "pm2 del node-red"
         ]
     },
