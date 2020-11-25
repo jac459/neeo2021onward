@@ -6,6 +6,19 @@ USE AT YOUR OWN RISK AT THIS MOMENT
 This README.MD file describes the work that has been done by the Telegram community "FindingNEEO" which has one global objective:
 Make certain that the original NEEO-remote is still useable after NEEO/C4 shuts down their cloud-infrastructure.
 
+# Key informations about the future of neeo
+## Why is beginning of 2021 an important date for neeo users?
+### Neeo and Control4
+As you may or may not know, the company which created your neeo remote has been acquired by another company, Control4.
+Control4 will NOT use neeo the way we do today and therefore the neeo remote product as we know it, is discontinued.
+#### User impact 1
+Since the control4 acquisition has happened, the support given by the company has already strongly declined and no more new devices are supported or improved since Q1 2019.
+#### User impact 2
+In Q1 2021, control4 will stop to provide the on-line services it currently provides:
+That means that if you purchase a new device, even if this device was supported by neeo, you won't be able to add it anymore.
+Also the TV channels list won't be updated anymore.
+
+
 Various projects are running that will support this goal:
 1) The Neeo Brain has been patched so that root-login to it now is possibly allowing modifications to it.  
 2) The Metadriver is developed to support easier development of actual device-drivers.
