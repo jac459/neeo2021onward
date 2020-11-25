@@ -51,26 +51,25 @@ USER meta
 RUN ls -al / | grep -i config
 RUN ls -al /config
 RUN id
-#RUN pm2 startup
 RUN npm install  --no-color  --prefix "/opt/meta/"  jac459/metadriver
 RUN pm2 start /opt/meta/node_modules/@jac459/metadriver/meta.js
 RUN pm2 start mosquitto
 RUN pm2 start node-red
 
 # uncomment next command to prevent autodiscovery of brain 
-COPY config/config.js /opt/meta/node_modules/@jac459/metadriver/config.js
+#COPY config/config.js /opt/meta/node_modules/@jac459/metadriver/config.js
 #COPY flows_cred.json /data/flows_cred.json
 #COPY flows.json /data/flows.json
 
 # Add configuration and scripts
 ADD startup/ /etc/meta/
 
-ENV OPENVPN_USERDIR=**None**
-EXPOSE 1880-1883
-EXPOSE 3000
-expose 4000-4100
+#ENV OPENVPN_USERDIR=**None**
+#EXPOSE 1880-1883
+#EXPOSE 3000
+#expose 4000-4100
 RUN pm2 save
 # Expose port and run
-#CMD ["dumb-init", "bash -c 'sleep 99m'"]
+#CMD "bash -c 'sleep 99m'"
 CMD /usr/bin/node /opt/meta/node_modules/@jac459/metadriver/meta.js
 

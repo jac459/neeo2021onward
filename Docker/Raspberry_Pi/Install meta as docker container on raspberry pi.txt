@@ -16,6 +16,6 @@ Some steps may be optional for you when you;ve bought a Raspberry PI with and SD
 6) This would be a good time to change the default password of the user named pi: just type passwd, then you will be asked to enter the current password, then type in a new one and once again to verify it.
 7) Now it's time to do some real work, installing docker. This is described in https://phoenixnap.com/kb/docker-on-raspberry-pi. Follow the instructions over there just as they are presented, don't experiment with them.
    Please note: you have to add the user pi to the group docker (as told on this site), then logout and login again.
-8) Once that's done, you can get the meta-image created on your docker host. Type curl -fsSL https://raw.githubusercontent.com/jac459/neeo2021onward/main/Docker/Raspberry_Pi/Dockerfile Dockerfile 
-9) You can now start to create a Docker image by this command "docker build -t meta:1 ." (without the quotes). Depending on the speed of your RPi, that may take up to 15 minutes.
+8) Once that's done, you can get the meta-image created on your docker host. Type curl -fsSL https://raw.githubusercontent.com/jac459/neeo2021onward/main/Docker/Raspberry_Pi/Dockerfile -o Dockerfile 
+9) You can now start to create a Docker image by this command "docker build -t meta:1 ." (without the quotes). Depending on the speed of your RPi, that may take up to 30 minutes; we're working on getting an image available that can be downloaded directly.
 10) If the build process ends with  
