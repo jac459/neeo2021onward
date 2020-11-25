@@ -18,6 +18,20 @@ In Q1 2021, control4 will stop to provide the on-line services it currently prov
 That means that if you purchase a new device, even if this device was supported by neeo, you won't be able to add it anymore.
 Also the TV channels list won't be updated anymore.
 
+## The good news
+### The community
+Since January 2020, a community of developers and passionate geeks are working on finding ways to continue the support of neeo, ie: adding new features and supported devices to the remote.
+### The results
+So far, the progress of the community are beyond our expectations and very significant progresses have been done.
+#### Neeo core services 
+Normally, only the neeo company is able to change the software which is inside the brain.
+This prevent any further update of this core software named: firmware.
+Since the beginning of the year, access has been found and we are now able to change and update this software.
+This process is called root.
+#### Neeo devices support
+Since before the purchase of Neeo by Control4, it is possible to develop new devices supoort to neeo.
+The best example of it is the kodi driver. This software gives a very rich control of your Kodi software, allowing for example to directly list  your movies from your remote.
+
 
 Various projects are running that will support this goal:
 1) The Neeo Brain has been patched so that root-login to it now is possibly allowing modifications to it.  
