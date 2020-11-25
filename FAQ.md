@@ -1,4 +1,4 @@
-README.MD
+FAQ.MD
 
 This README.MD file describes the work that has been done by the Telegram community "FindingNEEO" which has one global objective:
 Make certain that the original NEEO-remote is still useable after NEEO/C4 shuts down their cloud-infrastructure.
