@@ -16,9 +16,12 @@ Some steps may be optional for you when you;ve bought a Raspberry PI with and SD
 6) This would be a good time to change the default password of the user named pi: just type passwd, then you will be asked to enter the current password, then type in a new one and once again to verify it.
 7) Now it's time to do some real work, installing docker. This is described in https://phoenixnap.com/kb/docker-on-raspberry-pi. Follow the instructions over there just as they are presented, don't experiment with them.
    Please note: you have to add the user pi to the group docker (as told on this site), then logout and login again.
-8) now run docker pull tonot1/neeo-meta:0.5 to pull the image from hub.docker
-9) Then you can run docker: run -rm -it --net=host tonot1/neeo-meta:0.5 bash
-   That will start a container with all packages installed, but then starts bash as command processor. 
+8) now run docker pull tonot1/neeo-meta:latest to pull the image from hub.docker
+9) Then you can run docker: "docker run -rm -it --net=host tonot1/neeo-meta" 
+   That will start a container with all packages installed and running. 
+   The main process will be node /opt/meta/node_modules/@jac459/metadriver/meta/.js. 
+   If the main process fails and terminates, then the container will end as well. You can add --restart unless-stopped after the -rm in docker run and it will restart automatically. 
+   , but then starts bash as command processor. 
    The package normally starts node with /opt/meta/node_modules/@jac459/metadriver/meta.js, but somehow pm2 doesn't start the packages although I've added the startup of them to pm2. 
    For now, you can just do pm2 start mosquitto and pm2 start node-red, followed by either  the node startup or define that in PM2.
    Why they don't startup automatically by pm2 is something I'm looking in to right now...
