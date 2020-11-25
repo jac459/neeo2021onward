@@ -35,19 +35,22 @@ A custom driver is a driver not developped by neeo
 Since before the purchase of Neeo by Control4, it is possible to develop new devices supoort to neeo through custom drivers.
 The best example of it is the kodi driver. This software gives a very rich control of your Kodi software, allowing for example to directly list  your movies from your remote.
 
-##### Advantage
-###### Quality
+###### Advantage
+####### Quality
 The drivers created this way are generally smarter, faster, stronger than the average neeo driver you know as they use a more advanced technology.
 The driver will be able to list the applications of your TV, or know the the volume of your avr even if you b changed it directly by turning its know, ...
 ##### Disadvantages
-###### Hosting
+####### Hosting
 The custom drivers software can not easily run on the neeo brain. You will need a computer to run them. This computer needs to be on your home network (or wifi) and can be your desktop, ideally a Raspberry pi (extremely inexpensive), a NAS, ...
-###### Installation
+####### Installation
 While not complexe, the installation of these drivers involve typing some commands in the computer, that can be a bit scary for a non-technical person.
-###### Complexity
+####### Complexity
 These drivers are developed using an advanced technology called Node.js which is difficult to master and require a deep understanding of Neeo software interfaces (that is called an API).
 Therefore the initial investment to create a driver is important and required good development skills.
-
+##### the meta
+In order to tackle a part of these disadvantages a software has been created to help the creation of new custom drivers. This way, the meta tackles the complexity aspect by making it much easier for people to create new drivers while keeping the power of these kind of drivers.
+Also, because of its wide support the meta is now packaged with an installer making it very much easier for a non technical person to have the meta up and running.
+This is still work in progress and the whole product is being improved regularly.
 
 
 Various projects are running that will support this goal:
@@ -149,10 +152,10 @@ A. Every piece of equipment that is controlled by your NEEO remote needs a drive
 
 Q. What's the talk about "the NEW C4-remote versus the classic NEEO? They are both NEEO, right?
 A. When Control4 bought the NEEO-company, they stated that the N˜EEO-remote that came from NEEO (we call it the classic NEEO Remote) would no longer be sold.
-Shortly after that, Control4 announced "their NEEO remote", which is often called NEEO-C4, NEEO-Control4 or YIO. It's a totally different device.
+Shortly after that, Control4 announced "their NEEO remote", which is often called NEEO-C4 or NEEO-Control4. It's a totally different device.
 
-Q. Should I forget about my NEEOremote and buy a C4-NEEO (YIO)?
-A. You could, but the YIO is much more expensive and has a totally locked down firmware. If you want additional equipment to be supported, it has top be developed by Control4 which cost a lot of money again.
+Q. Should I forget about my NEEOremote and buy a C4-NEEO?
+A. You could, but the c4 I is much more expensive and has a totally locked down firmware. If you want additional equipment to be supported, it has top be developed by Control4 which cost a lot of money again.
 
 Q. Can we reflash the Brain and Remote so that it will become "the new C4-NEEO"?
 A. Probably not. Control4 probably uses (slightly) different hardware. It was never the intention of this community to convert the classic NEEO-remote to a C4 as this would probably violate Control4-copyrights.    
