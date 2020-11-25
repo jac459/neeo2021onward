@@ -1,8 +1,5 @@
 README.MD
 
-NOTE!!!!!!!! WORK IN PROGRESS, THE CONTENT WAS INITIALLY DEFINED BUT NOT REVIEWED YET !!!!!!!!!!!!!!!!!!!!NOTE
-USE AT YOUR OWN RISK AT THIS MOMENT
-
 This README.MD file describes the work that has been done by the Telegram community "FindingNEEO" which has one global objective:
 Make certain that the original NEEO-remote is still useable after NEEO/C4 shuts down their cloud-infrastructure.
 
@@ -36,27 +33,25 @@ Since before the purchase of Neeo by Control4, it is possible to develop new dev
 The best example of it is the kodi driver. This software gives a very rich control of your Kodi software, allowing for example to directly list  your movies from your remote.
 
 ###### Advantage
-####### Quality
+- Quality
 The drivers created this way are generally smarter, faster, stronger than the average neeo driver you know as they use a more advanced technology.
 The driver will be able to list the applications of your TV, or know the the volume of your avr even if you b changed it directly by turning its know, ...
 ##### Disadvantages
-####### Hosting
+- Hosting
 The custom drivers software can not easily run on the neeo brain. You will need a computer to run them. This computer needs to be on your home network (or wifi) and can be your desktop, ideally a Raspberry pi (extremely inexpensive), a NAS, ...
-####### Installation
-While not complexe, the installation of these drivers involve typing some commands in the computer, that can be a bit scary for a non-technical person.
-####### Complexity
+- Installation
+While not difficult, the installation of these drivers involve typing some commands in the computer, that can be a bit scary for a non-technical person.
+- Complexity
 These drivers are developed using an advanced technology called Node.js which is difficult to master and require a deep understanding of Neeo software interfaces (that is called an API).
 Therefore the initial investment to create a driver is important and required good development skills.
 ##### the meta
 In order to tackle a part of these disadvantages a software has been created to help the creation of new custom drivers. This way, the meta tackles the complexity aspect by making it much easier for people to create new drivers while keeping the power of these kind of drivers.
 Also, because of its wide support the meta is now packaged with an installer making it very much easier for a non technical person to have the meta up and running.
 This is still work in progress and the whole product is being improved regularly.
+Note: the meta has already run on the Brain and is working properly in it. Yet the process remains complex and for the immediate future, Raspberry Pi or NAS remain the best solution.
+Note 2: beyond the advantages of the meta for custom drivers, the meta brings also direct connectivity advanced home automation and iot technologies like Home Assistant, Homey, Node-red, ...
 
-
-Various projects are running that will support this goal:
-1) The Neeo Brain has been patched so that root-login to it now is possibly allowing modifications to it.  
-2) The Metadriver is developed to support easier development of actual device-drivers.
-3) Knowledge is continuously exchanged between the members.
+## Projects summary
 
 Following is a short explanation of the projects mentioned above.
 
@@ -74,7 +69,7 @@ The Brain's hardware (based on an Allwinner A20 cpu) is complex but not really p
 
 Area B) allows for backing up of the settings and installed custom drivers.
 
-2) The Metadriver is currently the project drawing thew most attention.
+2) The Metadriver is currently the project drawing the most attention.
 It is a privately developed Meta driver that supports easy development of custom drivers; hence the name "Meta".. 
 Standalone, the Metadriver doesn't deliver any functionality, but it provides an environment that greatly supports development with minimal code.
 If you have API-documentation of the device that you want to controll, you only need a little knowledge of programming to create your own driver. 
@@ -85,7 +80,7 @@ The current communication vehicle is a Telegram group, but we are looking into a
 
 After this introduction, the questions most found will be answered (FAQ).
 
-FAQ
+# FAQ
 Q. Why should I be interested in these developments? 
 A. NEEO/Control4 will shutdown the Cloud infrastructure that is used for installing new device support on your remote AND for recovering from logical damage to your remote (corrupted firmware / filesystem).
 
