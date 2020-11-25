@@ -1,0 +1,21 @@
+INSTALLING META as Docker container image
+
+START FROM SCRATCH:
+
+This section describes how to get started with a Raspbian PI, fresh out of the box.
+Some steps may be optional for you when you;ve bought a Raspberry PI with and SDCard that already contains Raspbian OS (operating system).
+
+1) Download Raspbian image and an appropriate installer from https://www.raspberrypi.org/software/ 
+2) Run the installer as described on https://www.raspberrypi.org/software/ and write the correct image to the SD-card. If you are asked for desktop or PI OS Lite, both are fine, but we suggest to use PI OS Lite.
+3) Before ejecting the SDCard from your computer, open a command promp (terminal under Linux), then create an empty file called ssh in the root of the partition named boot (on the SDCard).
+4) Eject the SDCard safely and put it in the Raspberry Pi (RPi).
+5) You can now either login locally (connecting a monitor and keyboard to the RPi) or through a remote session from your own computer.
+   a) Locally: login at the login prompt with user pi and password raspberry
+   b) Find out the ip-address of your RPi: connect to your router and find out the address from there.. Or use an IP-scanner; alternatives enough. 
+      Then connect remotely with the pi like this "ssh <ip-address of pi>  -l pi 
+6) This would be a good time to change the default password of the user named pi: just type passwd, then you will be asked to enter the current password, then type in a new one and once again to verify it.
+7) Now it's time to do some real work, installing docker. This is described in https://phoenixnap.com/kb/docker-on-raspberry-pi. Follow the instructions over there just as they are presented, don't experiment with them.
+   Please note: you have to add the user pi to the group docker (as told on this site), then logout and login again.
+8) Once that's done, you can get the meta-image created on your docker host. Type curl -fsSL https://raw.githubusercontent.com/jac459/neeo2021onward/main/Docker/Raspberry pi/Dockerfile Dockerfile 
+9) You can now start to create a Docker image by this command "docker build -t meta:1 ." (without the quotes). Depending on the speed of your RPi, that may take up to 15 minutes.
+10) If the build process ends with  
