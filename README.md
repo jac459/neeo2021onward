@@ -1,15 +1,57 @@
 README.MD
 
-NOTE!!!!!!!! WORK IN PROGRESS, THE CONTENT WAS INITIALLY DEFINED BUT NOT REVIEWED YET !!!!!!!!!!!!!!!!!!!!NOTE
-USE AT YOUR OWN RISK AT THIS MOMENT
-
 This README.MD file describes the work that has been done by the Telegram community "FindingNEEO" which has one global objective:
 Make certain that the original NEEO-remote is still useable after NEEO/C4 shuts down their cloud-infrastructure.
 
-Various projects are running that will support this goal:
-1) The Neeo Brain has been patched so that root-login to it now is possibly allowing modifications to it.  
-2) The Metadriver is developed to support easier development of actual device-drivers.
-3) Knowledge is continuously exchanged between the members.
+# Key informations about the future of neeo
+## Why is beginning of 2021 an important date for neeo users?
+### Neeo and Control4
+As you may or may not know, the company which created your neeo remote has been acquired by another company, Control4.
+Control4 will NOT use neeo the way we do today and therefore the neeo remote product as we know it, is discontinued.
+#### User impact 1
+Since the control4 acquisition has happened, the support given by the company has already strongly declined and no more new devices are supported or improved since Q1 2019.
+#### User impact 2
+In Q1 2021, control4 will stop to provide the on-line services it currently provides:
+That means that if you purchase a new device, even if this device was supported by neeo, you won't be able to add it anymore.
+Also the TV channels list won't be updated anymore.
+
+## The good news
+### The community
+Since January 2020, a community of developers and passionate geeks are working on finding ways to continue the support of neeo, ie: adding new features and supported devices to the remote.
+### The results
+So far, the progress of the community are beyond our expectations and very significant progresses have been done.
+#### Neeo core services 
+Normally, only the neeo company is able to change the software which is inside the brain.
+This prevent any further update of this core software named: firmware.
+Since the beginning of the year, access has been found and we are now able to change and update this software.
+This process is called root.
+#### Neeo devices support
+##### Custom drivers 
+A driver is a piece of software allowing to link an hardware device to a software. In our case a driver is a software allowing the control from the neeo remote, of a new external device (like a TV or a bulb for example).
+A custom driver is a driver not developped by neeo 
+Since before the purchase of Neeo by Control4, it is possible to develop new devices supoort to neeo through custom drivers.
+The best example of it is the kodi driver. This software gives a very rich control of your Kodi software, allowing for example to directly list  your movies from your remote.
+
+###### Advantage
+- Quality
+The drivers created this way are generally smarter, faster, stronger than the average neeo driver you know as they use a more advanced technology.
+The driver will be able to list the applications of your TV, or know the the volume of your avr even if you b changed it directly by turning its know, ...
+##### Disadvantages
+- Hosting
+The custom drivers software can not easily run on the neeo brain. You will need a computer to run them. This computer needs to be on your home network (or wifi) and can be your desktop, ideally a Raspberry pi (extremely inexpensive), a NAS, ...
+- Installation
+While not difficult, the installation of these drivers involve typing some commands in the computer, that can be a bit scary for a non-technical person.
+- Complexity
+These drivers are developed using an advanced technology called Node.js which is difficult to master and require a deep understanding of Neeo software interfaces (that is called an API).
+Therefore the initial investment to create a driver is important and required good development skills.
+##### the meta
+In order to tackle a part of these disadvantages a software has been created to help the creation of new custom drivers. This way, the meta tackles the complexity aspect by making it much easier for people to create new drivers while keeping the power of these kind of drivers.
+Also, because of its wide support the meta is now packaged with an installer making it very much easier for a non technical person to have the meta up and running.
+This is still work in progress and the whole product is being improved regularly.
+Note: the meta has already run on the Brain and is working properly in it. Yet the process remains complex and for the immediate future, Raspberry Pi or NAS remain the best solution.
+Note 2: beyond the advantages of the meta for custom drivers, the meta brings also direct connectivity advanced home automation and iot technologies like Home Assistant, Homey, Node-red, ...
+
+## Projects summary
 
 Following is a short explanation of the projects mentioned above.
 
@@ -27,7 +69,7 @@ The Brain's hardware (based on an Allwinner A20 cpu) is complex but not really p
 
 Area B) allows for backing up of the settings and installed custom drivers.
 
-2) The Metadriver is currently the project drawing thew most attention.
+2) The Metadriver is currently the project drawing the most attention.
 It is a privately developed Meta driver that supports easy development of custom drivers; hence the name "Meta".. 
 Standalone, the Metadriver doesn't deliver any functionality, but it provides an environment that greatly supports development with minimal code.
 If you have API-documentation of the device that you want to controll, you only need a little knowledge of programming to create your own driver. 
@@ -38,7 +80,7 @@ The current communication vehicle is a Telegram group, but we are looking into a
 
 After this introduction, the questions most found will be answered (FAQ).
 
-FAQ
+# FAQ
 Q. Why should I be interested in these developments? 
 A. NEEO/Control4 will shutdown the Cloud infrastructure that is used for installing new device support on your remote AND for recovering from logical damage to your remote (corrupted firmware / filesystem).
 
@@ -105,10 +147,10 @@ A. Every piece of equipment that is controlled by your NEEO remote needs a drive
 
 Q. What's the talk about "the NEW C4-remote versus the classic NEEO? They are both NEEO, right?
 A. When Control4 bought the NEEO-company, they stated that the N˜EEO-remote that came from NEEO (we call it the classic NEEO Remote) would no longer be sold.
-Shortly after that, Control4 announced "their NEEO remote", which is often called NEEO-C4, NEEO-Control4 or YIO. It's a totally different device.
+Shortly after that, Control4 announced "their NEEO remote", which is often called NEEO-C4 or NEEO-Control4. It's a totally different device.
 
-Q. Should I forget about my NEEOremote and buy a C4-NEEO (YIO)?
-A. You could, but the YIO is much more expensive and has a totally locked down firmware. If you want additional equipment to be supported, it has top be developed by Control4 which cost a lot of money again.
+Q. Should I forget about my NEEOremote and buy a C4-NEEO?
+A. You could, but the c4 I is much more expensive and has a totally locked down firmware. If you want additional equipment to be supported, it has top be developed by Control4 which cost a lot of money again.
 
 Q. Can we reflash the Brain and Remote so that it will become "the new C4-NEEO"?
 A. Probably not. Control4 probably uses (slightly) different hardware. It was never the intention of this community to convert the classic NEEO-remote to a C4 as this would probably violate Control4-copyrights.    
