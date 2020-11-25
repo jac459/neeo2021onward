@@ -29,8 +29,25 @@ This prevent any further update of this core software named: firmware.
 Since the beginning of the year, access has been found and we are now able to change and update this software.
 This process is called root.
 #### Neeo devices support
-Since before the purchase of Neeo by Control4, it is possible to develop new devices supoort to neeo.
+##### Custom drivers 
+A driver is a piece of software allowing to link an hardware device to a software. In our case a driver is a software allowing the control from the neeo remote, of a new external device (like a TV or a bulb for example).
+A custom driver is a driver not developped by neeo 
+Since before the purchase of Neeo by Control4, it is possible to develop new devices supoort to neeo through custom drivers.
 The best example of it is the kodi driver. This software gives a very rich control of your Kodi software, allowing for example to directly list  your movies from your remote.
+
+##### Advantage
+###### Quality
+The drivers created this way are generally smarter, faster, stronger than the average neeo driver you know as they use a more advanced technology.
+The driver will be able to list the applications of your TV, or know the the volume of your avr even if you b changed it directly by turning its know, ...
+##### Disadvantages
+###### Hosting
+The custom drivers software can not easily run on the neeo brain. You will need a computer to run them. This computer needs to be on your home network (or wifi) and can be your desktop, ideally a Raspberry pi (extremely inexpensive), a NAS, ...
+###### Installation
+While not complexe, the installation of these drivers involve typing some commands in the computer, that can be a bit scary for a non-technical person.
+###### Complexity
+These drivers are developed using an advanced technology called Node.js which is difficult to master and require a deep understanding of Neeo software interfaces (that is called an API).
+Therefore the initial investment to create a driver is important and required good development skills.
+
 
 
 Various projects are running that will support this goal:
