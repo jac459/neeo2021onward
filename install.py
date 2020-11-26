@@ -216,7 +216,7 @@ def DisplayPrimaryMenu():
                   else:
                       Content +=  "Not found --> Need to install\n"
                   DoWhip +=  Content
-       DoWhip +=   "Setup options\n' 45 70 15 " + \
+       DoWhip +=   "Setup options\n' 45 78 15 " + \
              " --cancel-button Finish --ok-button Select "\
              "'1 Check' 'Check packages installation status'   \
              '2 Install' 'Install missing packages' \
