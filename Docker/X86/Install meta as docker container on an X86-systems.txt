@@ -1,0 +1,17 @@
+INSTALLING META as Docker container image on X86-systems
+
+START FROM SCRATCH:
+
+This section describes how to get the meta docker-image on your docker server.
+It is assumed that you already have a working docker environment up and running with access to docker commands.
+
+1) Login to the computer that has docker running.
+2) Now run docker pull tonot1/neeo-meta:intel to pull the X86-image from hub.docker. Please note that there's also Raspbian-versions of the image, so take care to use the :intel version
+3) Then you can run docker: "docker run --name meta --net=host tonot1/neeo-meta:intel".
+   The --name just assigns the container the name meta, you can choose whatever you like (and is allowed by Docker)
+   The --net=host is here to share your own network with the container; we're checking to see if we can dispose off this, but for now, it's required.
+
+
+That's it!
+
+You can also build an image yourself, just use the Dockerfile that is in this directory, and copy the scripts directory with it, as that's the start-script for everything

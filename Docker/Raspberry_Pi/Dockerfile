@@ -26,10 +26,10 @@ RUN npm install -g --unsafe-perm node-red
 RUN mkdir -p /home
 RUN mkdir -p /home/meta
 RUN mkdir -p /home/meta/.meta
-RUN chown -R 1001:1000 "/home/meta/.meta"
+RUN chown -R 1000:1000 "/home/meta/.meta"
 
 RUN npm install pm2 -g
-RUN useradd -u 1001 -U -p "$(openssl passwd -1 meta)"  -d /config -s /bin/false meta
+RUN useradd -u 1000 -U -p "$(openssl passwd -1 meta)"  -d /config -s /bin/false meta
 RUN usermod -G users meta
 RUN adduser meta sudo
 
@@ -38,8 +38,8 @@ RUN mkdir -p /config/meta
 RUN mkdir -p /opt
 RUN mkdir -p /opt/meta
 RUN mkdir -p /config/.pm2
-RUN chown -R 1001:1000 "/config"
-RUN chown -R 1001:1000 "/opt/meta"
+RUN chown -R 1000:1000 "/config"
+RUN chown -R 1000:1000 "/opt/meta"
 
 RUN pm2 startup
               # Run this command as root, it sets up starting PM2, that needs to be done with root
