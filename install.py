@@ -1,4 +1,4 @@
-
+DebugSet = False
 import sys
 import os
 import os.path
@@ -11,6 +11,7 @@ import datetime
 import time
 import argparse
 import json
+import inspect
 
 InstalledCheckingVersion = 10
 InstalledAndOK = 0
@@ -37,26 +38,41 @@ InstalledAndOk = 0
 #--> Input is 3 valuesa: 1): Title, 2) eerrortext, 3) File to showTextInout is the package-name                          
 #--> Output is the entire json/array entry
 def HandleErrorShowOutput(MyError,GiveError,FileName):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
+
     DoWhip = "whiptail --yesno '"+GiveError+"\nClick ok to see output containing the error' --title '"+MyError+"' 10 80"
     if subprocess.call(DoWhip,shell=True)==False: 
        DoWhip = "whiptail --textbox --scrolltext  '"+FileName+"'  40 80"
        subprocess.call(DoWhip,shell=True)
 
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 
 #DOC: CheckDirectory routine
 #--> Simple routine  that checks if a file exists and is indeed a directory 9not a file)
 def CheckDirectory(TestDir):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     if os.path.exists(TestDir) and os.path.isdir(TestDir):
        return 1
     else:
        return 0
 
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
+
 #DOC: GetMyPackageFields routine
 #--> This routine gets the part of the jsan PAckage definitions for a specific package
 #--> Inout is the package-name
 #--> Output is the entire json/array entry
 def GetMyPackageFields(GetPKG):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     for pkg in MyPackages:
         if pkg['name'] == GetPKG:
@@ -66,11 +82,17 @@ def GetMyPackageFields(GetPKG):
     subprocess.call(DoWhip,shell=True)
     return ""
 
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
+
 #DOC: CheckAPTPackageInstalled routine
 #--> Low level routine that checks the status of an APT package
 #--> It just looks up the package name in the APT-cache.
 #--> If it installed, it will determine the version that is installed
 def CheckAPTPackageInstalled(pkg):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     try:
        PkgC = PackageCache[pkg['name']]
@@ -94,6 +116,9 @@ def CheckAPTPackageInstalled(pkg):
        Installed=VersionOnly[0]
     pkg['Inst_Vers'] = Installed.strip()
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
     return 1
 
 #DOC: CheckNPMPackageInstalled routine
@@ -101,6 +126,9 @@ def CheckAPTPackageInstalled(pkg):
 #--> If it is a local package (no -g in its install-cmd), it switches to the local directory where the package should be
 #--> then it calls npm list against the package
 def CheckNPMPackageInstalled(pkg):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     if " -g " in pkg['PKGParm']:
        doglob = " -g "
@@ -119,11 +147,26 @@ def CheckNPMPackageInstalled(pkg):
        fp.close()
        pkg['status'] = InstalledCheckingVersion
        MyVersion = Result.split('@')
-       pkg['Inst_Vers']  = MyVersion[1].strip()
+       if len(MyVersion) > 2:
+          VersionOnly  = MyVersion[2].strip()
+       else:
+          VersionOnly  = MyVersion[1].strip()
+       TheVersion  = VersionOnly.split(' ')
+       if len(TheVersion)>1:
+          pkg['Inst_Vers'] = TheVersion[0]
+       else:
+          pkg['Inst_Vers'] =  VersionOnly
+
+       if DebugSet:
+          print("Leaving",inspect.stack()[1][3])
        return 1
     else:
        AllDepsOK = False
+
+       if DebugSet:
+          print("Leaving",inspect.stack()[1][3])
        return 0
+
 
 #DOC:  TestThisPackage_OK
 #--> mid level routine that checks the status of all packages
@@ -131,25 +174,30 @@ def CheckNPMPackageInstalled(pkg):
 #--> The one real thing that happens here is  that it will set AllDepsOK to False if an installation fails.
 #--> No further logic. 
 def TestThisPackage_OK(pkg):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
 
-       if pkg['status'] == InstalledAndOK:
-          return
+    if pkg['status'] == InstalledAndOK:
+       return
 
-       pkg['status'] = NotInst
-       if pkg['type']  == PackageTypeAPT:
-          Installed = CheckAPTPackageInstalled(pkg)
-       elif pkg['type'] == PackageTypeNPM:
-          Installed = CheckNPMPackageInstalled(pkg)
+    pkg['status'] = NotInst
+    if pkg['type']  == PackageTypeAPT:
+       Installed = CheckAPTPackageInstalled(pkg)
+    elif pkg['type'] == PackageTypeNPM:
+       Installed = CheckNPMPackageInstalled(pkg)
 
-       if not Installed:
-          AllDepsOK = False
-          return
+    if not Installed:
+       AllDepsOK = False
+       return
 
-       if  pkg['Inst_Vers'] < pkg['reqvers'].strip():
-           pkg['status'] = InstalledButNotOK                #Signal package is installed, but version is too low
-           AllDepsOK = False
-       else:
-           pkg['status'] = InstalledAndOK                   #Signal package is installed with correct version
+    if  pkg['Inst_Vers'] < pkg['reqvers'].strip():
+        pkg['status'] = InstalledButNotOK                #Signal package is installed, but version is too low
+        AllDepsOK = False
+    else:
+        pkg['status'] = InstalledAndOK                   #Signal package is installed with correct version
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 
 #DOC: TestPackages_OK routine
 #--> High level routine that checks the status of all packages
@@ -158,6 +206,10 @@ def TestThisPackage_OK(pkg):
 def TestPackages_OK(Silent = False):
     global AllDepsOK
     global CheckedDependenciesAlready
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
+
     CheckedDependenciesAlready = True
     AllDepsOK = True
     ChangedDir = False                                          # assume we'll stay in the current directory
@@ -173,6 +225,10 @@ def TestPackages_OK(Silent = False):
 
     os.chdir(CurrDir)                                       #Return to the original directory , as we may have changed while testing NPM-packages
     PackageCache.close()
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
+
     return AllDepsOK
 
 #DOC: DisplayPrimaryMenu routine
@@ -184,11 +240,15 @@ def DisplayPrimaryMenu():
     global CheckedDependenciesAlready
     global AllDepsOK
 
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+       print("DisplayPrimaryMenu")
+
     if CheckedDependenciesAlready == False:
        DoWhip = "whiptail --title 'Raspberry pi configurator for NEEO' --menu '"
        for pkg in MyPackages:
-                  Content = "\nRequired: " + pkg['name'] + " " + pkg['reqvers']
-                  Content = Content.ljust(25, ' ')
+                  Content = "\nRequired: " + pkg['name'][0:17] + " " + pkg['reqvers']
+                  Content = Content.ljust(40, ' ')
                   if  pkg['type'] ==  PackageTypeAPT:
                       Content += " APT "
                   elif  pkg['type'] ==  PackageTypeNPM:
@@ -203,8 +263,8 @@ def DisplayPrimaryMenu():
     else:
        DoWhip = "whiptail --title 'Raspberry pi configurator for NEEO' --menu  'Package status:\n\n"
        for pkg in MyPackages:
-                  Content = "Required: " + pkg['name'] + " " + pkg['reqvers']
-                  Content = Content.ljust(25, ' ')
+                  Content = "Required: " + pkg['name'][0:17] + " " + pkg['reqvers']
+                  Content = Content.ljust(40, ' ')
                   if  pkg['type'] ==  PackageTypeAPT:
                       Content += " APT "
                   elif  pkg['type'] ==  PackageTypeNPM:
@@ -226,6 +286,8 @@ def DisplayPrimaryMenu():
              'X Exit' 'Exit the program'"
        DoWhip += " 2>" + LogDir + "/Mainmenu.txt"  
 #             'n Startup' 'Create autostart for all nodered'  \
+    if DebugSet:
+       print(DoWhip)
     Response = subprocess.call(DoWhip,shell=True)
     if Response == 0:
        fp =  open(LogDir + '/Mainmenu.txt')
@@ -237,6 +299,9 @@ def DisplayPrimaryMenu():
        Do_Exit(0)
        return "@"  # signal somethiong is wrong with the main menu
 
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
+
 #DOC: Do_Install_dependencies routine
 #--> High level install-routine 
 #--> Presents select menu with all packages that are not yet installed and on the correct level. User can then select which packages to install.
@@ -244,6 +309,9 @@ def DisplayPrimaryMenu():
 
 #--> Second phase is to call the installation routine to verify dependencies and install package 
 def Do_Install_dependencies(Silent):
+
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
 
     if Silent:
        DoThis = ""
@@ -262,7 +330,13 @@ def Do_Install_dependencies(Silent):
            InstallPackage(pkg,Silent)                                  # install the package
            PackageCache.update()
 
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
+
 def DoAPTUpdate():
+    if DebugSet:
+        print("Entering",inspect.stack()[1][3])
+
     APTUpdateCMD = "apt update -y 1>" + LogDir + "/BackgroundAPTUpdate.txt"
     Response = subprocess.call(APTUpdateCMD,shell=True)
     if Response == 0:
@@ -270,13 +344,22 @@ def DoAPTUpdate():
        Result = fp.readline()
        fp.close()
        #print("Did an apt update",Result) 
+
+       if DebugSet:
+          print("Leaving",inspect.stack()[1][3])
        return 
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: InstallPackageAPT routine
 #--> Low level install-routine for APT-packages only 
 #--> Handles Dependency checking and if all are okay, calls ther actual APT- or NPM-install routine.def InstallPackageAPT(pkg,Silent):
 #--> Always uses root (we run as root, so it does not lower it's access-rights)
     global PackageCache
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     APTAddPackageCMD = "apt install -y "+ pkg['name'] + " 1>" + LogDir + "/BackgroundAPTInstall" + pkg['name'] + ".txt"
     if not Silent:
@@ -293,43 +376,55 @@ def DoAPTUpdate():
 
     return Response 
 
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
+
 #DOC: InstallPackageNPM routine
 #--> Low level install-routine for NPM-packages only 
 #--> Handles Dependency checking and if all are okay, calls ther actual APT- or NPM-install routine.
 #--> Uses root (we run as root, so it does not lower it's access-rights) if it is a globally installed package (-g parm), otherwise lowers rights first to original userid
 def InstallPackageNPM(pkg,Silent):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
 
-       MyLoc = ""
-       if pkg['loc'] != "":              # Do we need to install it on a specific location?
-          print("Checking custom location now",pkg['loc'])
-          InstallDir = OriginalHomeDir+"/"+pkg['loc']
-          MyLoc = " --prefix " + '"' + InstallDir + '"' + " "
-          if os.path.isdir(InstallDir) == False:
-             DoMKDirCMD = MySudo +  "mkdir  "  + '"' + InstallDir + '"' + " 2>"+ LogDir + "/BackgroundMkdir.txt'"
-             Response = subprocess.call(DoMKDirCMD,shell=True)
-             if Response:
-                print("Fatal error ocurred  when creating directory for  package:",pkg['name'],InstallDir)
-                Do_Exit(12)
 
-       if pkg['PackageUSER'] != "":
-          APTNPMPackageCMD =  pkg['PKGParm'] +  " "  +  MyLoc  + " " + pkg['PKGParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall"+ pkg['name'] + ".txt"
-       else:
-          APTNPMPackageCMD = MySudo + "export HOME="+OriginalHomeDir + "&& " +  pkg['PKGParm'] +  " --no-color "  +  MyLoc  + " " + pkg['PKGParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall"+ pkg['name'] + ".txt'"
+    MyLoc = ""
+    if pkg['loc'] != "":              # Do we need to install it on a specific location?
+       print("Checking custom location now",pkg['loc'])
+       InstallDir = OriginalHomeDir+"/"+pkg['loc']
+       MyLoc = " --prefix " + '"' + InstallDir + '"' + " "
+       if os.path.isdir(InstallDir) == False:
+          DoMKDirCMD = MySudo +  "mkdir  "  + '"' + InstallDir + '"' + " 2>"+ LogDir + "/BackgroundMkdir.txt'"
+          Response = subprocess.call(DoMKDirCMD,shell=True)
+          if Response:
+             print("Fatal error ocurred  when creating directory for  package:",pkg['name'],InstallDir)
+             Do_Exit(12)
 
-       if not Silent:
-          print(APTNPMPackageCMD)
-       Response = subprocess.call(APTNPMPackageCMD,shell=True)
+    if pkg['PackageUSER'] != "":
+       APTNPMPackageCMD =  pkg['PKGParm'] +  " "  +  MyLoc  + " " + pkg['PKGParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall"+ pkg['name'] + ".txt"
+    else:
+      APTNPMPackageCMD = MySudo + "export HOME="+OriginalHomeDir + "&& " +  pkg['PKGParm'] +  " --no-color "  +  MyLoc  + " " + pkg['PKGParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall"+ pkg['name'] + ".txt'"
 
-       if Response:
-          HandleErrorShowOutput("Error NPM-install","Could not install package "+ pkg['name'], LogDir + "/BackgroundNPMInstall" + pkg['name'] + ".txt" )
-       TestThisPackage_OK(pkg)                     # Refresh status of this package 
-       return Response
+    if not Silent:
+       print(APTNPMPackageCMD)
+    Response = subprocess.call(APTNPMPackageCMD,shell=True)
 
+    if Response:
+       HandleErrorShowOutput("Error NPM-install","Could not install package "+ pkg['name'], LogDir + "/BackgroundNPMInstall" + pkg['name'] + ".txt" )
+    TestThisPackage_OK(pkg)                     # Refresh status of this package 
+    return Response
+
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: InstallPackage routine
 #--> High level install-routine 
 #--> hHandles Dependency checking and if all are okay, calls ther actual APT- or NPM-install routine.
 def InstallPackage(pkg,Silent):                           # High level install-routine;  handles Dependency checking and if all are okay, calls ther actual APT- or NPM-install routine.
     global DidAPTUpdate
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
     InstalledSomething = False
     if DidAPTUpdate == False:
        DidAPTUpdate = True
@@ -357,9 +452,15 @@ def InstallPackage(pkg,Silent):                           # High level install-r
     elif pkg['type'] == PackageTypeNPM:   #Is this an NPM-package?
        Response =  InstallPackageNPM(pkg,Silent)
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: SelectPackageToInstall 
 #--> "Gui" that shows packages that need to be installed or updated 
 def SelectPackageToInstall():             
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     DoWhip = "whiptail --title 'Install dependencies'   --checklist  'Select packages you want to be installed'  25 78 15 "
     MyIndex = 0
@@ -377,16 +478,27 @@ def SelectPackageToInstall():
        fp.close()
        return Choice
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_Check_dependencies
 #--> A bit of an empty shell. It just calls TestPackages_OK
 #--> It's here to follow the naming conventions from the primary menu. 
 def Do_Check_dependencies(Silent):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+        
+        
     TestPackages_OK(Silent)
 
-
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_ListDependencies
 #--> Processor for  the --List argument: Silently print what packages are installed and what versions 
 def Do_ListDependencies(Silent):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     TestPackages_OK(Silent)
 
@@ -400,9 +512,16 @@ def Do_ListDependencies(Silent):
 
     print(json.dumps(data,sort_keys=True, indent=4, separators=(',', ': ')))
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: HandleChoice
 #-->  Checks what is selectyed on the primary menu and call the corresponding function 
 def HandleChoice(i,Silent=False):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
+
     switcher = {
             "1": lambda: Do_Check_dependencies(Silent),
             "2": lambda: Do_Install_dependencies(Silent),
@@ -419,9 +538,14 @@ def HandleChoice(i,Silent=False):
     func = switcher.get(i[0], lambda: 'Invalid')
     func()
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_SetupStartups
 #-->  Routine for creating startup parameters for the installed packages
 def Do_SetupStartups(Silent):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
 
     for pkg in MyPackages:
         if pkg['status'] == InstalledAndOk  and len(pkg['startcmd']) > 0:
@@ -446,9 +570,15 @@ def Do_SetupStartups(Silent):
                   print("Fatal error ocurred in Startupcmd",StartupCMD,"for  package:",pkg['name'],PipeFile)
                   Do_Exit(12)
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_RenameDir
 #-->  A general rename directory routine
 def Do_RenameDir(srcDir,destDir):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
     try:
         os.rename(srcDir,destDir)
     except EnvironmentError:
@@ -456,9 +586,14 @@ def Do_RenameDir(srcDir,destDir):
        subprocess.call(DoError,shell=True)
        Do_Exit(12)
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_GetMetaLibrariesfromGithub 
 #-->  Routine to download the entire metadriver from github; only 2 directories are used however by routines following this one: activated and deactivated
 def Do_GetMetaLibrariesfromGithub():
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
 
     UniqueName = datetime.datetime.now().strftime("%Y-%m%d %H.%M.%S")                          # prepare to geta unique archive-name for directories
     GitDir = OriginalHomeDir+"/GIT "+ UniqueName
@@ -473,10 +608,16 @@ def Do_GetMetaLibrariesfromGithub():
        return ""
     return GitDir+"/"
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_Copy
 #-->  General purpose routine that copies a source-directory (and subdirectories) to a destination.
 #-->  Once copied, it removes the entire tree from sourcdir
 def Do_Copy(src, dst, symlinks=False, ignore=None):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
     print("Do_Copy %s %s",src,dst)
     if not os.path.exists(dst):
         os.makedirs(dst)
@@ -489,9 +630,15 @@ def Do_Copy(src, dst, symlinks=False, ignore=None):
             if not os.path.exists(d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
                 shutil.copy2(s, d)
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_MoveNoReplace
 #-->  General purpose routine that move files (and directories) from  a source-directory to a destination. It will NOT overwrite any files in the destination.
 def Do_MoveNoReplace(InSrcDir,InDestDir):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     print("Do_MoveNoReplace",InSrcDir, InDestDir)
     for src_dir, dirs, files in os.walk(InSrcDir):
@@ -506,9 +653,15 @@ def Do_MoveNoReplace(InSrcDir,InDestDir):
               continue
            shutil.move(src_file, dst_dir)
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_SaveHouseKeepingThisDir
 #-->  Routine that moves files (and directories) from  a source-directory to an arc hive/staging  destination.
 def Do_SaveHouseKeepingThisDir(SrcDir,TypeDir,DestDir):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     UniqueName = datetime.datetime.now().strftime("%Y-%m%d %H.%M.%S")                          # prepare to geta unique archive-name for directories
     for file in os.listdir(SrcDir+TypeDir):                       # Do we even have a meta0directory with this subdir (TypeDir: activated or deactivated)
@@ -521,35 +674,59 @@ def Do_SaveHouseKeepingThisDir(SrcDir,TypeDir,DestDir):
        return 1
     return 0
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_SaveHouseKeeping
 #-->  High level routine that moves files (and directories) from  a source-directory to an archive/staging  destination.
 #--> In essence, it's just a driver for Do_SaveHouseKeepingThisDir for both the activated and the deactivated directory
 def Do_SaveHouseKeeping(MetaDir,SaveDir):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     Do_SaveHouseKeepingThisDir(MetaDir, "activated",SaveDir)
     Do_SaveHouseKeepingThisDir(MetaDir, "deactivated",SaveDir)
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_SaveHouseKeeping
 #-->  High level routine that moves files (and directories) from  a source-directory to an archive/staging  destination.
 #-->  Here, a different routione is called if files are allowed to be overwritten or not
 def Do_MoveThisDir(SrcDir,TypeDir,DestDir,ReplaceParm):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     if ReplaceParm:
        Do_Copy(SrcDir+TypeDir,DestDir+TypeDir)
     else:
        Do_MoveNoReplace(SrcDir+TypeDir,DestDir+TypeDir)
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_MoveDirs
 #-->  High level routine that moves files (and directories) from  a source-directory to an archive/staging  destination.
 #--> In essence, it's just a driver for Do_MoveThisDir for both the activated and the deactivated directory
 def Do_MoveDirs(SrcDir,DestDir,ReplaceParm):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     Do_MoveThisDir(SrcDir, "activated",DestDir,ReplaceParm)
     Do_MoveThisDir(SrcDir, "deactivated",DestDir,ReplaceParm)
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_Refresh_NEEOCustom
 #-->  High level routine that handles the refresh examples directories.
 def Do_Refresh_NEEOCustom(Silent):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     global SaveDir 
     MetaDir = OriginalHomeDir+"/.meta/node_modules/@jac459/metadriver/"
@@ -565,15 +742,28 @@ def Do_Refresh_NEEOCustom(Silent):
     Do_MoveDirs(SaveDir,MetaDir,False)                                  # Next, move back all files that were saved into the neew Meta-directory, without REPLACING ANYONE  (False)
     shutil.rmtree(GitDir)
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_It_All
 #-->  High level routine that handles the silent  --InstallAndStart
 def Do_It_All():
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
+
     Print("Now just run through all the options.")
 
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: SetAccessRights
 #-->  Set the access rights to the user on a couple of directories (and files in it)
 def SetAccessRights(ThisDir):
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     for root, dirs, files in os.walk(ThisDir):
         for TheDir in dirs:
@@ -583,19 +773,31 @@ def SetAccessRights(ThisDir):
     if os.path.isdir(ThisDir):
        os.chown(ThisDir, OriginalUID,  OriginalGID)
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: Do_Exit
 #-->  Generic exit routine. 
 #--> Mainly used to Set accessrights good when the program somehow needs to stop (planned or not planned)
 def Do_Exit(RC):                                                        #exit, but first set  logdirectory+fils in it to original user&group
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     SetAccessRights(LogDir)                                             #Before we say goodbye, we set accessrights on some folders to or own user
     SetAccessRights(SaveDir) 
     sys.exit(RC)
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC: DoSomeInit
 #-->  Generic initialisation routine. 
 #--> Mainly used to Set accessrights good when the program somehow needs to stop (planned or not planned)
 def DoSomeInit():
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
     global OriginalUsername
     global OriginalHomeDir
     global OriginalUID
@@ -660,20 +862,32 @@ def DoSomeInit():
     InstallDir = OriginalHomeDir+"/.meta"
     PackageCache  = apt.cache.Cache()
 
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC:  Handle the functions initiated via command line parameters 
 def Do_Silent_Commands():
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
 
-   if MyArgs.Install:
-      HandleChoice(1,True)
 
-   if MyArgs.InstallAndStart:
-      HandleChoice(1,True) 
+    if MyArgs.Install:
+       HandleChoice(1,True)
 
-   if  MyArgs.List:
-      HandleChoice("L",True) 
+    if MyArgs.InstallAndStart:
+       HandleChoice(1,True) 
 
+    if  MyArgs.List:
+       HandleChoice("L",True) 
+
+
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
 #DOC:  Setup parser for command line parameters 
 def CheckArgs():
+    if DebugSet:
+       print("Entering",inspect.stack()[1][3])
+
 
     global MyArgs       
     parser = argparse.ArgumentParser(description='NEEO custom devicedriver host builder')
@@ -695,15 +909,19 @@ def CheckArgs():
 
     MyArgs = parser.parse_args()
 
-# Driver program
-global DidAPTUpdate
-global AllDepsOK
-global CheckedDependenciesAlready
-AllDepsOK = False
-CheckedDependenciesAlready = False
 
-if __name__ == "__main__":
-   DoSomeInit()
+    if DebugSet:
+       print("Leaving",inspect.stack()[1][3])
+def MyMain():
+   global DidAPTUpdate 
+   global AllDepsOK
+   global CheckedDependenciesAlready
+   if DebugSet:
+      print("Entering",inspect.stack()[1][3])
+
+   AllDepsOK = False
+   CheckedDependenciesAlready = False      
+   DoSomeInit() 
    GoOn = True
    DidAPTUpdate = False
 
@@ -711,7 +929,7 @@ if __name__ == "__main__":
       Do_Silent_Commands()
       GoOn = False
 
-
+    
    while GoOn == True:
        MenuChoice = DisplayPrimaryMenu()
        if MenuChoice == "@":                        # fatal error while displaying main menu
@@ -719,5 +937,10 @@ if __name__ == "__main__":
            continue
        else:
            HandleChoice(MenuChoice)
+       
+   if DebugSet:
+      print("Leaving",inspect.stack()[1][3])
+# Driver program
 
-
+if __name__ == "__main__":
+   MyMain()
