@@ -401,22 +401,23 @@ def InstallPackageNPM(pkg,Silent):
              Do_Exit(12)
 
     if pkg['PackageUSER'] != "":
-       APTNPMPackageCMD =  pkg['PKGParm'] +  " "  +  MyLoc  + " " + pkg['PKGParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall"+ pkg['name'] + ".txt"
+       APTNPMPackageCMD =  pkg['PKGParm'] +  " "  +  MyLoc  + " " + pkg['PKGParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall.txt"
     else:
-      APTNPMPackageCMD = MySudo + "export HOME="+OriginalHomeDir + "&& " +  pkg['PKGParm'] +  " --no-color "  +  MyLoc  + " " + pkg['PKGParm2'] + "  2>" + LogDir + "/BackgroundNPMInstall"+ pkg['name'] + ".txt'"
+      APTNPMPackageCMD = MySudo + "export HOME="+OriginalHomeDir + "&& " +  pkg['PKGParm'] +  " --no-color "  +  MyLoc  + " " + pkg['PKGParm2'] + "  2>>" + LogDir + "/BackgroundNPMInstall.txt'"
 
     if not Silent:
        print(APTNPMPackageCMD)
     Response = subprocess.call(APTNPMPackageCMD,shell=True)
 
     if Response:
-       HandleErrorShowOutput("Error NPM-install","Could not install package "+ pkg['name'], LogDir + "/BackgroundNPMInstall" + pkg['name'] + ".txt" )
+       HandleErrorShowOutput("Error NPM-install","Could not install package "+ pkg['name'], LogDir + "/BackgroundNPMInstall.txt" )
     TestThisPackage_OK(pkg)                     # Refresh status of this package 
     return Response
 
 
     if DebugSet:
        print("Leaving",inspect.stack()[1][3])
+
 #DOC: InstallPackage routine
 #--> High level install-routine 
 #--> hHandles Dependency checking and if all are okay, calls ther actual APT- or NPM-install routine.
