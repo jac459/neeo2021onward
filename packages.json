@@ -104,7 +104,7 @@
     {
         "name": "jac459/metadriver",
         "type": 2,
-        "reqvers": "0.9.81",
+        "reqvers": "1.0.0",
         "status": 99,
         "Inst_Vers": "",
         "loc": ".meta",
