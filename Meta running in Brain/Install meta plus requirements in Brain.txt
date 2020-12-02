@@ -7,10 +7,10 @@ Normally, cleanup should not be necessary because people will follow you install
 
 Removal old stuff:
 login through ssh
- a)  sudo mount -o remount,rw /
+ a) sudo mount -o remount,rw /
  b) sudo rm -r /steady/neeo-custom
- c) sudo rm -r /steady/pm2-home
- d) sudo rm -r steady/.install
+ c) sudo rm -r /steady/pm2-meta
+ d) sudo rm -r /steady/.installer
  
 Not all of these directories will be there, so no problems if commands fail.
 If you want to be absolutely sure, you can reboot the brain (sudo reboot now), but that should not be necessary 
@@ -19,7 +19,9 @@ Installation of metadriver (and prerequisites) on NEEO-Brain
 login through ssh -i <key-ending with id_rsa> -l neeo
 
    1  sudo mount -o remount,rw /
-   2  curl ' https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh' -o installmeta.js -s
+   2 curl ' https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh' -o installmeta.js -s
+     ---> This does not work yet, as the brain isn;t able to oen an https-site (so it seeems). Please download installmeta.sh from github on your pc and transfer it to the brain with scp or winscp
+      
    3 . installmeta.sh
    4 . ~/.bashrc
    5 nvm install --lts=erbium

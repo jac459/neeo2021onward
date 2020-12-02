@@ -117,8 +117,20 @@ Do_Install_NVM()
 #        echo 'Error installing npm (nvm install --lts=erbium)'
 #        exit 12
 #    fi
+    MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
+    if [ "$?" -ne 0 ]
+       then
+        echo 'chmod 777 /steady/neeo-custom/pm2-meta/pub.sock' >> ~/.bashrc
+        echo 'chmod 777 /steady/neeo-custom/pm2-meta/rpc.sock'>> ~/.bashrc
+        echo 'export PM2_HOME=/steady/neeo-custom/pm2-meta' >> ~/.bashrc
+    fi
+    cd /steady/neeo-custom
     echo "Stage 4" >> "$Statefile"
-    echo "Preparing reboot to activate certain system tasks; please reconnect after 60 seconds and restart installmeta.sh again"
+    echo "Please execute the following commands: (then start installmeta.sh again)"
+    echo ". ~/.bashrc"
+    echo "nvm install --lts=erbium"
+    echo "cd ~" 
+    echo "then run installer again: . installmeta.sh"
     GoOn="0"
     return 
 #    sleep 10s
@@ -180,12 +192,6 @@ Do_Install_Meta()
        then
         echo 'Install of metadriver failed'
         exit 12
-    fi
-    MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/pm2-meta')
-    if [ "$?" -ne 0 ]
-       then
-        echo 'chmod 777 /steady/neeo-custom/pm2-meta/pub.sock' >> ~/.bashrc
-        echo 'chmod 777 /steady/neeo-custom/pm2-meta/rpc.sock'>> ~/.bashrc
     fi
     echo "Stage 7" >> "$Statefile"
 }
