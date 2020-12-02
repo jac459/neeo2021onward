@@ -225,8 +225,8 @@ Do_Setup_PM2()
    MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
    if [ "$?" -ne 0 ]
        then
-        echo 'chmod 777 /steady/neeo-custom/pm2-meta/pub.sock' >> ~/.bashrc
-        echo 'chmod 777 /steady/neeo-custom/pm2-meta/rpc.sock'>> ~/.bashrc
+        echo 'sudo chmod 777 /steady/neeo-custom/pm2-meta/pub.sock' >> ~/.bashrc
+        echo 'sudo chmod 777 /steady/neeo-custom/pm2-meta/rpc.sock'>> ~/.bashrc
    fi 
    sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 startup
    sudo chown neeo /steady/neeo-custom/pm2-meta/rpc.sock /steady/neeo-custom/pm2-meta/pub.sock
