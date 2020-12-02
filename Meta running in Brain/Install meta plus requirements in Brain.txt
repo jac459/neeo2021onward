@@ -19,9 +19,7 @@ Installation of metadriver (and prerequisites) on NEEO-Brain
 login through ssh -i <key-ending with id_rsa> -l neeo
 
    1  sudo mount -o remount,rw /
-   2 curl ' https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh' -o installmeta.js -s
-     ---> This does not work yet, as the brain isn;t able to oen an https-site (so it seeems). Please download installmeta.sh from github on your pc and transfer it to the brain with scp or winscp
-      
+   2 curl ' https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh' -o installmeta.js -k
    3 . installmeta.sh
    4 . ~/.bashrc
    5 nvm install --lts=erbium
