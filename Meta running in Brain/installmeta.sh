@@ -1,4 +1,4 @@
-#!/bin/bash
+#/bin/bash!
 #
 # Meta Installer for NEEO-Brain
 #
@@ -111,12 +111,12 @@ Do_Install_NVM()
         echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm'>> ~/.bashrc
         .bashrc
     fi
-#    /home/neeo/.nvm/nvm.sh  --install --lts=erbium   #somehow, this doesn't work when called from a shell script. 
-#    if [ "$?" -ne 0 ]
-#       then
-#        echo 'Error installing npm (nvm install --lts=erbium)'
-#        exit 12
-#    fi
+    /home/neeo/.nvm/nvm.sh  --install --lts=erbium   #somehow, this doesn't work when called from a shell script. 
+    if [ "$?" -ne 0 ]
+       then
+        echo 'Error installing npm (nvm install --lts=erbium)'
+        exit 12
+    fi
     MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
     if [ "$?" -ne 0 ]
        then
@@ -124,12 +124,13 @@ Do_Install_NVM()
     fi
     cd /steady/neeo-custom
     echo "Stage 4" >> "$Statefile"
-    echo "Please execute the following commands: (then start installmeta.sh again)"
-    echo ". ~/.bashrc"
-    echo "nvm install --lts=erbium"
-    echo "cd ~" 
-    echo "then run installer again: . installmeta.sh"
-    GoOn="0"
+#    echo "Please execute the following commands: (then start installmeta.sh again)"
+#    echo ". ~/.bashrc"
+#    echo "nvm install --lts=erbium"
+#    echo "cd ~" 
+#    echo "then run installer again: . installmeta.sh"
+    source ~/.bashrc
+#    GoOn="0"
     return 
 #    sleep 10s
 #    sudo reboot now
