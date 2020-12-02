@@ -27,12 +27,16 @@ login through ssh -i <key-ending with id_rsa> -l neeo
    7 . installmeta.sh
    
 That's it, you should now be able to see node-red as a webpage server from your brain: <IP-address Brain>:1880 in your browser
-You can check the status of the services that need to be running for meta with this command:
-PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 list <-- this gives you the status of all 3 services, they need to have status online
+
+All of the meta-services (mosquitto, node-red and metadriver) are started under a user-version of PM2, leaving NEEO's processes alone. 
+Most users will only be interested in the new user-services, so we have added assignment of PM2_HOME to the user-directory for PM2 (in .bashrc). 
+You can check the status of these user services with this command:
+pm2 list <-- this gives you the status of all 3 user-services, they need to have status online
 If you want to see the output of meta, use this command:
-PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 log meta
-This shows you a running output of the output from meta; any new message will show herte until; you hit cntrl-c
+pm2 log meta
+This shows you a running output of the output from meta; any new message will show there until you hit cntrl-c
 
 Restarting meta:
-PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 restart meta
- 
+pm2 restart meta
+
+Please note that all commands in this textfile are CASE-sensitive!!! Type them in exactly as they are presentes here. 
