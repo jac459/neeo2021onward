@@ -141,7 +141,10 @@ Do_Install_NVM()
     if [ "$?" -ne 0 ]
        then
         echo 'Error installing npm&node (nvm install --lts=erbium)'
-        echo "Please execute the following coommand, the nrun installmeta again: . .bashrc (yes: dot blank dot)"
+
+        echo 'This error happens sometimes and is easy to fix'
+        echo 'Please execute the following command, then run installmeta again: . .bashrc (yes: dot blank dot!)'
+        sleep 10s
         exit 12
     fi
     MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier

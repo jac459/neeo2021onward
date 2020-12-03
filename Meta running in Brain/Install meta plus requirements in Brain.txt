@@ -18,14 +18,14 @@ If you want to be absolutely sure, you can reboot the brain (sudo reboot now), b
 Installation of metadriver (and prerequisites) on NEEO-Brain 
 login through ssh -i <key-ending with id_rsa> -l neeo
 
-   1  sudo mount -o remount,rw /
-   2 curl ' https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh' -o installmeta.js -k
-   3 . installmeta.sh
-   4 . ~/.bashrc
-   5 nvm install --lts=erbium
-   6 cd ~
-   7 . installmeta.sh
+   1 sudo mount -o remount,rw /
+   2 curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh' -k | bash
    
+   In some cases, the script stops with a message telling you to execute a command and restart the installer.
+   In this case:
+   3) type the command . .bashrc and enter ; this sets up links to the nvm-package that the installer failed to do.
+   4) type again the command you entered before curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh' -k | bash
+
 That's it, you should now be able to see node-red as a webpage server from your brain: <IP-address Brain>:1880 in your browser
 
 All of the meta-services (mosquitto, node-red and metadriver) are started under a user-version of PM2, leaving NEEO's processes alone. 
