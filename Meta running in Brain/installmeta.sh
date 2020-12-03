@@ -16,16 +16,7 @@
 #  8; Adding users (mosquitto, changing profile for neeo-user to chmod /steady/neeo-custom/pm2-meta/pub.sock & /steady/neeo-custom/pm2-meta/rpc.sock to 777
 #  9; Setting up autopstart via PM2
 #  9; Signalling we have run seuccesfully  
-usage() {
-  cat << EOL
-Usage: $0 [options]
 
-Options:
-  --help            display this help and exits
-  --1               Start installer phase 1 (before reboot)
-  --2               Start installer phase 2 (final, after the reboot)
-EOL
-}
 
 Do_ReadState()
 {
@@ -44,7 +35,7 @@ Do_ReadState()
 Do_Mount_root()
 {
 #0
-   echo "Step #0: Mounting root rw"
+   echo "Stage 0: Setup a rewritable root-partition (includes enmtry in /etc/fstab)"
    MyMounts=$(mount|grep 'dev/mmcblk0p2 ')
    if [ $(echo "$MyMounts" | grep '(ro') ]
       then 
@@ -75,6 +66,8 @@ Do_Mount_root()
 Do_Setup_steady_directory_struct()
 {
 #1  
+   echo "Stage 1: Setting up directories and rights"
+
    sudo mkdir /steady/neeo-custom
    sudo chown neeo:wheel /steady/neeo-custom
    sudo chmod -R 775 /steady/neeo-custom
@@ -84,6 +77,8 @@ Do_Setup_steady_directory_struct()
 Do_Reset_Pacman()
 {
 #2
+   echo "Stage 2: Restoring pacman to a workable state"
+
    sudo pacman -Sy --noconfirm
    if [ "$?" -ne 0 ]
        then
@@ -102,6 +97,7 @@ Do_Reset_Pacman()
 Do_Install_NVM()
 {
 #3
+    echo "Stage 3: installing NVM, then secondary npm&node"
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
     sudo chmod -R ugo+rx /home/neeo/.nvm 
     MyBashrc=$(cat ~/.bashrc |grep 'export NVM_DIR="$HOME/.nvm')
@@ -109,12 +105,12 @@ Do_Install_NVM()
        then
         echo 'export NVM_DIR="$HOME/.nvm" ' >> ~/.bashrc
         echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm'>> ~/.bashrc
-        .bashrc
+        source .bashrc
     fi
-    /home/neeo/.nvm/nvm.sh  --install --lts=erbium   #somehow, this doesn't work when called from a shell script. 
+    nvm  install --lts=erbium   #somehow, this doesn't work when called from a shell script. 
     if [ "$?" -ne 0 ]
        then
-        echo 'Error installing npm (nvm install --lts=erbium)'
+        echo 'Error installing npm&node (nvm install --lts=erbium)'
         exit 12
     fi
     MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
@@ -145,6 +141,8 @@ Do_Install_NVM()
 Do_Finish_NVM()
 {
 #4
+   echo "Stage 4: Finishing setup npm&node"
+
    cd /steady/neeo-custom/
    npm install npm -g
    if [ "$?" -ne 0 ]
@@ -157,6 +155,8 @@ Do_Finish_NVM()
 Do_Install_Git()
 {
 #5
+   echo "Stage 5: installing GIT"
+
    sudo pacman -S --overwrite  '/*' --noconfirm  git
    if [ "$?" -ne 0 ]
        then
@@ -169,6 +169,7 @@ Do_Install_Git()
 Do_Install_Meta()
 {
 #6
+   echo "Stage 6: installing Metadriver (JAC459/metadriver)"
 
    cd /steady
    if [[ -e "pm2-meta" ]]
@@ -198,6 +199,8 @@ Do_Install_Meta()
 Do_Install_Mosquitto()
 {
 #7
+   echo "Stage 7: installing Mosquitto"
+
    sudo useradd -u 1002 mosquitto
    sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
    if [ "$?" -ne 0 ]
@@ -209,8 +212,10 @@ Do_Install_Mosquitto()
 }
 
 Do_Install_NodeRed()
-{
+{   
 #8
+   echo "Stage 8: installing Node-Red"
+
    sudo npm install -g --unsafe-perm node-red
    if [ "$?" -ne 0 ]
        then
@@ -223,6 +228,8 @@ Do_Install_NodeRed()
 
 Do_Setup_PM2()
 {
+#9
+   echo "Stage 9: Activating services in PM2"
    MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
    if [ "$?" -ne 0 ]
        then
@@ -246,6 +253,8 @@ echo "We are done installng"
 }
 
 ##Main routine
+
+
 
 STAGE="0"        # Assume that we we will start from scratch 
 if [ $# -gt 0 ]; then
@@ -289,7 +298,7 @@ else
     echo "Stage 0" > "$Statefile"
     FoundStage="0"
 fi
-echo "We are in stage $FoundStage"
+echo "We are running in stage $FoundStage of 9"
 
 #    case $FoundStage in
 
