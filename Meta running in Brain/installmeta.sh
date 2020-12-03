@@ -37,9 +37,9 @@ Do_Reset()
 {
 echo "Clearing statemachine, restarting from begin... you may get errors about packages already being installed..."
 STAGE="0"
-if [[ -e "$Statedir" ]
+if [ -e "$Statedir" ]
     then 
-    sudo rmdir -r "$Statedir"] 
+    sudo rmdir -r "$Statedir" 
     fi 
 
 }
@@ -123,19 +123,25 @@ Do_Install_NVM()
 {
 #3
     echo "Stage 3: installing NVM, then secondary npm&node"
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
+    if [ -e ~/.nvm ]
+       then 
+      echo "NVM already installed"
+    else   
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
+    fi 
     sudo chmod -R ugo+rx /home/neeo/.nvm 
     MyBashrc=$(cat ~/.bashrc |grep 'export NVM_DIR="$HOME/.nvm')
     if [ "$?" -ne 0 ]
        then
         echo 'export NVM_DIR="$HOME/.nvm" ' >> ~/.bashrc
         echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm'>> ~/.bashrc
-        source .bashrc
     fi
+    . .bashrc   
     nvm install --lts=erbium
     if [ "$?" -ne 0 ]
        then
         echo 'Error installing npm&node (nvm install --lts=erbium)'
+        echo "Please execute the following coommand, the nrun installmeta again: . .bashrc (yes: dot blank dot)"
         exit 12
     fi
     MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
