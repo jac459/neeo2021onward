@@ -18,6 +18,31 @@
 #  9; Signalling we have run seuccesfully  
 
 
+# First, define some variables used in here
+Statedir="/steady/.installer"
+Statefile="/steady/.installer/state"
+STAGE=0
+# then define all functions that we are going to use.
+usage() {
+  cat << EOL
+Usage: $0 [options]
+
+Options:
+  --help            display this help and exits
+  --reset           Start installer from scratch)
+EOL
+}
+
+Do_Reset()
+{
+echo "Clearing statemachine, restarting from begin... you may get errors about packages already being installed..."
+STAGE="0"
+if [[ -e "$Statedir" ]
+    then 
+    sudo rmdir -r "$Statedir"] 
+    fi 
+
+}
 Do_ReadState()
 {
   LastLine=$(tail -n 1 "$Statefile")
@@ -27,7 +52,7 @@ Do_ReadState()
       then 
       FoundStage=$(echo "$LastLine" | cut -c7-8) 
   else
-      echo "Found $StageID but that doesn't match 'Stage '; so $FoundStage isn;t valid either"
+      echo "Found $StageID but that doesn't match 'Stage '; so $FoundStage isn't valid either"
       exit 12   
   fi
 }
@@ -107,7 +132,7 @@ Do_Install_NVM()
         echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm'>> ~/.bashrc
         source .bashrc
     fi
-    nvm  install --lts=erbium   #somehow, this doesn't work when called from a shell script. 
+    nvm install --lts=erbium
     if [ "$?" -ne 0 ]
        then
         echo 'Error installing npm&node (nvm install --lts=erbium)'
@@ -265,12 +290,8 @@ if [ $# -gt 0 ]; then
         usage && exit 0
         shift
         ;;
-      --1)
-        STAGE=="1"
-        shift
-        ;;
-      --2)
-        STAGE="2"
+      --reset)
+        Do_Reset
         shift
         ;;
       -*|--*=) # unsupported flags
@@ -281,8 +302,7 @@ if [ $# -gt 0 ]; then
   done
 fi
 
-Statedir="/steady/.installer"
-Statefile="/steady/.installer/state"
+
 #empty stage-file
 if [[ -e "$Statedir" ]];
     then 
