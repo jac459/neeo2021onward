@@ -104,7 +104,7 @@ Do_Reset_Pacman()
 #2
    echo "Stage 2: Restoring pacman to a workable state"
    MyPacmanVersion=$(pacman --version|grep 'Pacman v')
-   if [ "$MyPacmanVersion"="Pacman v5.2.2 - libalpm v12.0.2" ]
+   if [ "$MyPacmanVersion" = "Pacman v5.2.2 - libalpm v12.0.2" ]
       then
       echo "Pacman is already up-to-date"
    else
@@ -175,6 +175,7 @@ Do_Finish_NVM()
        echo 'Error installing npm (npm install npm -g)'
        exit 12
    fi
+       cd ~
     echo "Stage 5" >> "$Statefile"
 }
 
