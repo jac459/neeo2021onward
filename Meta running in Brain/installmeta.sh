@@ -39,7 +39,7 @@ echo "Clearing statemachine, restarting from begin... you may get errors about p
 STAGE="0"
 if [ -e "$Statedir" ]
     then 
-    sudo rmdir -r "$Statedir" 
+    sudo rm -r "$Statedir" 
     fi 
 
 }
@@ -103,20 +103,26 @@ Do_Reset_Pacman()
 {
 #2
    echo "Stage 2: Restoring pacman to a workable state"
+   MyPacmanVersion=$(pacman --version|grep 'Pacman v')
+   if [ "$MyPacmanVersion="Pacman v5.2.2 - libalpm v12.0.2" ]
+      then
+      echo "Pacman is already up-to-date"
+   else
+      sudo pacman -Sy --noconfirm
+      if [ "$?" -ne 0 ]
+          then
+           echo 'error occured during pacman restore (pacman -Sy --noconfirm)'
+           exit 12
+      fi
+      sudo pacman -S --force --noconfirm pacman
 
-   sudo pacman -Sy --noconfirm
-   if [ "$?" -ne 0 ]
-       then
-        echo 'error occured during pacman restore (pacman -Sy --noconfirm)'
-        exit 12
-   fi
-   sudo pacman -S --force --noconfirm pacman
-   if [ "$?" -ne 0 ]
-       then
-        echo 'error occured during pacman restore (pacman -S --force --noconfirm pacman)'
-        exit 12
+      if [ "$?" -ne 0 ]
+          then
+          echo 'error occured during pacman restore (pacman -S --force --noconfirm pacman)'
+           exit 12
+      fi
    fi   
-    echo "Stage 3" >> "$Statefile"
+   echo "Stage 3" >> "$Statefile"
 }
 
 Do_Install_NVM()
@@ -154,22 +160,7 @@ Do_Install_NVM()
     fi
     cd /steady/neeo-custom
     echo "Stage 4" >> "$Statefile"
-#    echo "Please execute the following commands: (then start installmeta.sh again)"
-#    echo ". ~/.bashrc"
-#    echo "nvm install --lts=erbium"
-#    echo "cd ~" 
-#    echo "then run installer again: . installmeta.sh"
-    source ~/.bashrc
-#    GoOn="0"
-    return 
-#    sleep 10s
-#    sudo reboot now
 
-    if [ "$?" -ne 0 ]
-       then
-        echo 'Error requesting a reboot, please check and reboot manually (then restart installer again)'
-        exit 12 
-    fi
 }
 
 Do_Finish_NVM()
