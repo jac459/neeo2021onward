@@ -21,15 +21,19 @@
 # First, define some variables used in here
 Statedir="/steady/.installer"
 Statefile="/steady/.installer/state"
+VersionFile="/steady/.installer/version"
 STAGE=0
+MyVersion=0.2
 # then define all functions that we are going to use.
 usage() {
   cat << EOL
+Installer for NEEO-Brain v$MyVersion 
 Usage: $0 [options]
 
-Options:
+Options: 
   --help            display this help and exits
   --reset           Start installer from scratch)
+  --upgrade         Upgrade environment to add/improve functionality
 EOL
 }
 
@@ -45,6 +49,21 @@ if [ -e "$Statedir" ]
 }
 Do_ReadState()
 {
+if [[ -e "$Statedir" ]];                   # do we have the state-directory in /steady?
+    then 
+    if [[ -e "$Statefile" ]];              # yes, do we alsoi have the state file in there?
+       then  Do_ReadState                  # no
+    else
+       echo "Stage 0" > "$Statefile"       # create an empty stage-file
+    fi 
+    sudo chown neeo:wheel "$Statedir"      # make sure normal user can access the directory
+else
+    sudo mkdir "$Statedir"                 # No state-0directory found, make it so we can save our state
+    sudo chown neeo:wheel "$Statedir"      # make sure normal user can access the directory
+    echo "Stage 0" > "$Statefile"          # and create an empty file 
+    #FoundStage="0"  no longer needed                        # tell the installer we start from scratch
+fi
+
   LastLine=$(tail -n 1 "$Statefile")
   StageID=$(echo "$LastLine" | cut -c1-6) 
   echo "$StageID"
@@ -55,6 +74,14 @@ Do_ReadState()
       echo "Found $StageID but that doesn't match 'Stage '; so $FoundStage isn't valid either"
       exit 12   
   fi
+  if [ "$Upgrade_requested"=1 ]  # Did user requested an upgrade?
+   then 
+     if [ "$FoundStage" ne 'A' ]  # Yes, but did we already have a completely installed system?
+        then
+        echo "Please let installer run first to a succesful end before upgrading"
+        exit 12
+      fi
+   LastLine=$(tail -n 1 "$Versionfile")
 }
 
 Do_Mount_root()
@@ -297,30 +324,24 @@ if [ $# -gt 0 ]; then
         Do_Reset
         shift
         ;;
+      --upgrade)
+        Upgrade_requested=1
+        ;;   
       -*|--*=) # unsupported flags
         echo "Error: Unsupported flag $1" >&2
         exit 1
         ;;
+      *)
+        echo "Please use correct format for arguments $1 not recognised" >&2
+        usage &&exit 1
+        ;; 
     esac
   done
 fi
 
 
-#empty stage-file
-if [[ -e "$Statedir" ]];
-    then 
-    if [[ -e "$Statefile" ]];
-       then  Do_ReadState
-    else
-       echo "Stage 0" > "$Statefile"       
-    fi 
-    sudo chown neeo:wheel "$Statedir"
-else
-    sudo mkdir "$Statedir"
-    sudo chown neeo:wheel "$Statedir"
-    echo "Stage 0" > "$Statefile"
-    FoundStage="0"
-fi
+
+
 echo "We are running in stage $FoundStage of 9"
 
 #    case $FoundStage in
