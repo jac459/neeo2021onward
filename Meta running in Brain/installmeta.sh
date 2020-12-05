@@ -23,7 +23,7 @@ Statedir="/steady/.installer"
 Statefile="/steady/.installer/state"
 VersionFile="/steady/.installer/version"
 STAGE=0
-MyVersion=0.2
+LastVersion=0.2
 # then define all functions that we are going to use.
 usage() {
   cat << EOL
@@ -82,6 +82,10 @@ fi
         exit 12
       fi
    LastLine=$(tail -n 1 "$Versionfile")
+   echo "$LastLine" | cut ':')
+   exit 12
+
+   
 }
 
 Do_Mount_root()
@@ -343,6 +347,12 @@ fi
 
 
 echo "We are running in stage $FoundStage of 9"
+if [ "$Upgrade_requested"=1 ]
+   then
+      echo "We will be doing an upgrade from $MyVersion to the latest version: $LastVersion"
+      Do_Upgrade
+      return
+   fi 
 
 #    case $FoundStage in
 
