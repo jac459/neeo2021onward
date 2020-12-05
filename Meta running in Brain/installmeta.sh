@@ -269,7 +269,8 @@ Do_Setup_PM2()
 
    PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
    PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start node-red -f  --node-args='--max-old-space-size=128'
-   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start /steady/neeo-custom/node_modules/\@jac459/metadriver/meta.js
+   cd /steady/neeo-custom/node_modules/\@jac459/metadriver
+   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start meta.js
    sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 save
     echo "Stage A" >> "$Statefile"
 }
