@@ -286,7 +286,6 @@ function Do_Install_NVM()
        then
         echo 'export PM2_HOME=/steady/neeo-custom/pm2-meta' >> ~/.bashrc
     fi
-    cd /steady/neeo-custom
     Do_SetNextStage $Exec_finish_nvm
 
 }
@@ -309,6 +308,7 @@ function Do_Finish_NVM()
       then
        echo 'Error installing npm (npm install npm -g)'
        GoOn=0
+       popd 
        return
    fi
        popd 
@@ -346,7 +346,7 @@ function Do_Install_Meta()
    #   then
    #   return                                                           # in tis case, upgrade will be requiresd
    #fi
-
+   pushd .
    cd /steady
    if [[ -e "pm2-meta" ]]
        then 
@@ -356,15 +356,22 @@ function Do_Install_Meta()
    fi
 
    cd /steady/neeo-custom/ 
-
+   if [[ -e ".meta" ]]
+       then 
+      echo "/steady/.meta already exist"
+   else
+      sudo mkdir .meta
+   fi
+   cd .meta 
    npm install jac459/metadriver
    if [ "$?" -ne 0 ]
        then
         echo 'Install of metadriver failed'
         GoOn=0
+        popd 
         return
     fi
-
+   popd 
    if [  "$UpgradeMetaOnly_requested" = "1"]
        then
        Do_SetNextStage $Exec_setup_pm2
@@ -428,9 +435,8 @@ function Do_Install_NodeRed()
 #     npm ERR! Exit status 1
  
    pushd .
-   cd /steady/neeo-custom
-   mkdir .node-red
-   cd .node-red
+   mkdir /steady/neeo-custom/.node-red
+   cd /steady/neeo-custom/.node-red
    sudo npm install --unsafe-perm node-red
    if [ "$?" -ne 0 ]
        then
@@ -491,7 +497,7 @@ function Do_Setup_PM2()
    PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
    cd /steady/neeo-custom/.node-red/node_modules/node-red
    PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start red.js -f  --node-args='--max-old-space-size=128'
-   pushd .
+
    cd /steady/neeo-custom/node_modules/\@jac459/metadriver
    PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start meta.js
    popd
