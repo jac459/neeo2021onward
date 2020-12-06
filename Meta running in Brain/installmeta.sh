@@ -300,16 +300,21 @@ function Do_Finish_NVM()
       Do_SetNextStage $Exec_install_git
       return      #nothing to do
    fi
-
-   pushd . 
-   cd /steady/neeo-custom/
-   npm install npm -g
-   if [ "$?" -ne 0 ]
+   MyNPM=$(nvm -v)
+   if [[ "$MyNPM|" == "6.14.9" ]]
       then
-       echo 'Error installing npm (npm install npm -g)'
-       GoOn=0
-       popd 
-       return
+      echo "NPM 6.14.9 was already installed, skipping" 
+   else
+      pushd . 
+      cd /steady/neeo-custom/
+      npm install npm -g
+      if [ "$?" -ne 0 ]
+         then
+          echo 'Error installing npm (npm install npm -g)'
+          GoOn=0
+          popd 
+          return
+      fi 
    fi
        popd 
     Do_SetNextStage $Exec_install_git
@@ -498,12 +503,20 @@ function Do_Setup_PM2()
    sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 startup
    sudo chown neeo /steady/neeo-custom/pm2-meta/rpc.sock /steady/neeo-custom/pm2-meta/pub.sock
    pushd .
-   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
+   sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
+   if [[ "$0" != 0 ]]
+      echo "Error adding mosquitto-start to PM2"
+   fi 
    cd /steady/neeo-custom/.node-red/node_modules/node-red
-   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start red.js -f  --node-args='--max-old-space-size=128'
-
+   sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start red.js -f  --node-args='--max-old-space-size=128'
+   if [[ "$0" != 0 ]]
+      echo "Error adding node-red-start to PM2"
+   fi 
    cd /steady/neeo-custom/node_modules/\@jac459/metadriver
-   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start meta.js
+   sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start meta.js
+   if [[ "$0" != 0 ]]
+      echo "Error adding meta-start to PM2"
+   fi 
    popd
    sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 save
    Do_SetNextStage $Exec_finish
