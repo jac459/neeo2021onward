@@ -21,9 +21,13 @@
 # First, define some variables used in here
 Statedir="/steady/.installer"
 Statefile="$Statedir/state"
+FoundStage=0
 VersionFile="$Statedir/version"
 LatestVersion=1.1
 InstalledVersion=1.0  # assume that the first installer ran before.
+Upgrade_requested=0
+UpgradeMetaOnly_requested=0
+GoOn=1                # the main loop controller
 
 #Following table maintains the version where a new or changed functionality was introduced; used to check if we need to execute an upgrade for a function  
 Function_0_Introduced=1.0
@@ -38,8 +42,39 @@ Function_8_Introduced=1.0
 Function_9_Introduced=1.0
 Function_A_Introduced=1.1
 
+# Following are the various stages that can be executed
+Exec_mount_root_stage=0
+Exec_setup_steady_stage=1
+Exec_reset_pacman=2
+Exec_install_nvm=3
+Exec_finish_nvm=4
+Exec_install_git=5
+Exec_install_meta=6
+Exec_install_mosquitto=7
+Exec_install_nodered=8
+Exec_backup_solution=9 
+Exec_setup_pm2=X 
+Exec_all_stages=0
+Exec_finish=Y 
+Exec_finish_done=Z
+
 # then define all functions that we are going to use.
-usage() {
+
+ctrlc_count=0
+
+function no_ctrlc()
+{
+    let ctrlc_count++
+    echo
+    if [[ $ctrlc_count == 1 ]]; then
+        echo "cntrl-C hit, please confirm with another cntrl-c."
+    elif [[ $ctrlc_count == 2 ]]; then
+        echo "That's it.  I quit."
+        exit
+    fi
+}
+
+function usage() {
   cat << EOL
 Installer for NEEO-Brain v$MyVersion 
 Usage: $0 [options]
@@ -47,11 +82,12 @@ Usage: $0 [options]
 Options: 
   --help            display this help and exits
   --reset           Start installer from scratch)
+  --meta-only       Only pull a new version of metadriver, and restart it
   --upgrade         Upgrade environment to add/improve functionality
 EOL
 }
 
-Do_Reset()
+function Do_Reset()
 {
 echo "Clearing statemachine, restarting from begin... you may get errors about packages already being installed..."
 if [ -e "$Statedir" ]
@@ -60,7 +96,8 @@ if [ -e "$Statedir" ]
     fi 
 
 }
-Do_ReadState()
+
+function Do_ReadState()
 {
   if [ -e "$Statedir"  ];                   # do we have the state-directory in /steady?
       then 
@@ -76,13 +113,18 @@ Do_ReadState()
       #FoundStage="0"  no longer needed                        # tell the installer we start from scratch
   fi
   LastLine=$(tail -n 1 "$Statefile")
-  StageID=$(echo "$LastLine" | cut -c1-6) 
-  if [ "$StageID" = "Stage " ]
-      then 
-      FoundStage=$(echo "$LastLine" | cut -c7-8) 
+  if [ "$LastLine" != "" ] 
+     then
+     StageID=$(echo "$LastLine" | cut -c1-6) 
+     if [ "$StageID" = "Stage " ]
+         then 
+         FoundStage=$(echo "$LastLine" | cut -c7-8) 
+     else
+         echo "Found $StageID but that doesn't match 'Stage '; so $FoundStage isn't valid either"
+         GoOn=0
+     fi
   else
-      echo "Found $StageID but that doesn't match 'Stage '; so $FoundStage isn't valid either"
-      GoOn=0
+     FoundStage=0 			  # file with state found, but with no content; assume it's not there and start at stage 0
   fi
 
   if [ -e "$VersionFile" ]                 # Now find out which version of the installer ran (will be in /steady/.install/version unless user removed it / never ran it
@@ -95,13 +137,27 @@ Do_ReadState()
   fi
 }
 
-Do_Mount_root()
+function Do_SetNextStage()
+{
+   if [ "$1" = "" ]
+      then 
+      echo "error in setting nextstage; input for nextstage is empty"
+      exit 12
+   fi
+    FoundStage="$1"
+    echo "Stage $1" >> "$Statefile"
+    echo "$FoundStage"
+}
+
+function Do_Mount_root()
 {
 #0
    echo "Stage 0: Setup a rewritable root-partition (includes entry in /etc/fstab)"
 
-   if [ "$Upgrade_requested"  ]
+   if [ "$Upgrade_requested" == 1   ]
       then 
+      echo "skip this step"
+      Do_SetNextStage $Exec_setup_steady_stage
       return      #nothing to do
    fi  
 
@@ -113,7 +169,8 @@ Do_Mount_root()
       if [ "$?" -ne 0 ]
          then
          echo "The script failed" >&2
-         exit 1  
+         GoOn=0
+         return  
       fi
    fi
    MyFstab=$(grep 'dev/mmcblk0p2  /       ext2    ro         ' /etc/fstab)
@@ -123,19 +180,26 @@ Do_Mount_root()
        if [ "$?" -ne 0 ]
          then
            echo "Coud not update fstab" >&2
-          exit 1   
+           GoOn=0
+           return
         fi
        echo "/etc/fstab is now patched, continuing"
     else
        echo "/etc/fstab was already patched, so it seems, continuing"
     fi
-    echo "Stage 1" >> "$Statefile"
+    Do_SetNextStage $Exec_setup_steady_stage
 } 
 
-Do_Setup_steady_directory_struct()
+function Do_Setup_steady_directory_struct()
 {
 #1  
-   echo "Stage 1: Setting up directories and rights"
+   echo "Stage $Exec_setup_steady_stage: Setting up directories and rights"
+
+   if [ "$Upgrade_requested" == 1   ] 
+      then 
+      Do_SetNextStage $Exec_reset_pacman  
+      return      #nothing to do
+   fi
 
    if [ "$Upgrade_requested"  ] 
       then 
@@ -145,21 +209,23 @@ Do_Setup_steady_directory_struct()
    sudo mkdir /steady/neeo-custom
    sudo chown neeo:wheel /steady/neeo-custom
    sudo chmod -R 775 /steady/neeo-custom
-   echo "Stage 2" >> "$Statefile"
+   Do_SetNextStage $Exec_reset_pacman
+
 }
 
-Do_Reset_Pacman()
+function Do_Reset_Pacman()
 {
 #2
-   echo "Stage 2: Restoring pacman to a workable state"
+   echo "Stage $Exec_reset_pacman: Restoring pacman to a workable state"
 
-   if [ "$Upgrade_requested"  ] 
+   if [ "$Upgrade_requested" == 1  ] 
       then 
+       Do_SetNextStage $Exec_install_nvm
       return      #nothing to do
    fi
 
    MyPacmanVersion=$(pacman --version|grep 'Pacman v')
-   if [ "$MyPacmanVersion" = ".--. Pacman v5.2.2 - libalpm v12.0.2" ]
+   if [[ "$MyPacmanVersion" == *"v5.2.2"* ]]
       then
       echo "Pacman is already up-to-date"
    else
@@ -167,28 +233,31 @@ Do_Reset_Pacman()
       if [ "$?" -ne 0 ]
           then
            echo 'error occured during pacman restore (pacman -Sy --noconfirm)'
-           exit 12
+           GoOn=0
+           return
       fi
       sudo pacman -S --force --noconfirm pacman
 
       if [ "$?" -ne 0 ]
           then
           echo 'error occured during pacman restore (pacman -S --force --noconfirm pacman)'
-           exit 12
+          GoOn=0
+          return
       fi
    fi   
-   echo "Stage 3" >> "$Statefile"
+   Do_SetNextStage $Exec_install_nvm
+
+
 }
 
-Do_Install_NVM()
+function Do_Install_NVM()
 {
 #3
-    echo "Stage 3: installing NVM, then secondary npm&node"
-
+    echo "Stage $Exec_install_nvm: installing NVM, then secondary npm&node"
        
-       
-   if [ "$Upgrade_requested"  ]
+   if [ "$Upgrade_requested" == 1  ]
       then
+       Do_SetNextStage $Exec_finish_nvm
       return      #nothing to do
    fi
 
@@ -214,101 +283,126 @@ Do_Install_NVM()
         echo 'This error happens sometimes and is easy to fix'
         echo 'Please execute the following command, then run installmeta again: . .bashrc (yes: dot blank dot!)'
         sleep 10s
-        exit 12
+        GoOn=0
+        return
     fi
     MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
     if [ "$?" -ne 0 ]
        then
         echo 'export PM2_HOME=/steady/neeo-custom/pm2-meta' >> ~/.bashrc
     fi
-    cd /steady/neeo-custom
-    echo "Stage 4" >> "$Statefile"
+    Do_SetNextStage $Exec_finish_nvm
 
 }
 
-Do_Finish_NVM()
+function Do_Finish_NVM()
 {
 #4
-   echo "Stage 4: Finishing setup npm&node"
-
+   echo "Stage $Exec_finish_nvm: Finishing setup npm&node"
        
-   if [ "$Upgrade_requested"  ]
+   if [ "$Upgrade_requested" == 1 ]
       then
+      Do_SetNextStage $Exec_install_git
       return      #nothing to do
    fi
-
-   cd /steady/neeo-custom/
-   npm install npm -g
-   if [ "$?" -ne 0 ]
+   MyNPM=$(nvm -v)
+   if [[ "$MyNPM|" == "6.14.9" ]]
       then
-       echo 'Error installing npm (npm install npm -g)'
-       exit 12
+      echo "NPM 6.14.9 was already installed, skipping" 
+   else
+      pushd . 
+      cd /steady/neeo-custom/
+      npm install npm -g
+      if [ "$?" -ne 0 ]
+         then
+          echo 'Error installing npm (npm install npm -g)'
+          GoOn=0
+          popd 
+          return
+      fi 
    fi
-       cd ~
-    echo "Stage 5" >> "$Statefile"
+       popd 
+    Do_SetNextStage $Exec_install_git
+
 }
 
-Do_Install_Git()
+function Do_Install_Git()
 {
 #5
-   echo "Stage 5: installing GIT"
+   echo "Stage $Exec_install_git: installing GIT"
        
-   if [ "$Upgrade_requested"  ]
+   if [ "$Upgrade_requested" == 1 ]
       then
+      Do_SetNextStage $Exec_install_meta
       return      #nothing to do
    fi
-
-   sudo pacman -S --overwrite  '/*' --noconfirm  git
-   if [ "$?" -ne 0 ]
-       then
-        echo 'Install of Git failed'
-        exit 12
-    fi   
-    echo "Stage 6" >> "$Statefile"
+  MyGit=$(command -v git)
+  if [[ "$MyGit" == "" ]]
+   then 
+      sudo pacman -S --overwrite  '/*' --noconfirm  git
+      if [ "$?" -ne 0 ]
+          then
+           echo 'Install of Git failed'
+         GoOn=0
+         return
+     fi
+   else
+      echo "Git is already installed"   
+   fi
+    Do_SetNextStage $Exec_install_meta
 }
 
-Do_Install_Meta()
+function Do_Install_Meta()
 {
 #6
-   echo "Stage 6: installing Metadriver (JAC459/metadriver)"
+   echo "Stage $Exec_install_meta: installing Metadriver (JAC459/metadriver)"
        
-   #if [ "$Upgrade_requested"  ]
+   #if [ "$Upgrade_requested" == 1 ]
    #   then
    #   return                                                           # in tis case, upgrade will be requiresd
    #fi
-
+   pushd .
    cd /steady
    if [[ -e "pm2-meta" ]]
        then 
       echo "/steady/pm2-meta already exist"
    else
-
-      sudo mkdir pm2-meta
+      mkdir pm2-meta
    fi
-   cd /steady/neeo-custom/ 
-   npm install npm -g 
-   if [ "$?" -ne 0 ]
-       then
-        echo 'Install of global npm failed'
-        exit 12
-    fi
 
+   cd /steady/neeo-custom/ 
+   if [[ -e ".meta" ]]
+       then 
+      echo "/steady/.meta already exist"
+   else
+      mkdir .meta
+   fi
+   cd .meta 
    npm install jac459/metadriver
    if [ "$?" -ne 0 ]
        then
         echo 'Install of metadriver failed'
-        exit 12
+        GoOn=0
+        popd 
+        return
     fi
-    echo "Stage 7" >> "$Statefile"
+   popd 
+   if [  "$UpgradeMetaOnly_requested" = "1"]
+       then
+       Do_SetNextStage $Exec_setup_pm2
+   else
+       Do_SetNextStage $Exec_install_mosquitto
+   fi
 }
 
-Do_Install_Mosquitto()
+function Do_Install_Mosquitto()
 {
 #7
-   echo "Stage 7: installing Mosquitto"
+   echo "Stage $Exec_install_mosquitto: installing Mosquitto"
        
-   if [ "$Upgrade_requested"  ]
+   if [ "$Upgrade_requested" == 1 ]
       then
+      Do_SetNextStage $Exec_install_nodered
       return      #nothing to do
    fi
 
@@ -317,65 +411,67 @@ Do_Install_Mosquitto()
    if [ "$?" -ne 0 ]
        then
         echo 'Install of Mosquitto failed'
-        exit 12
-    fi   
-    echo "Stage 8" >> "$Statefile"
+        GoOn=0
+        return
+    fi  
+    Do_SetNextStage $Exec_install_nodered 
 }
 
-Do_Install_NodeRed()
+function Do_Install_NodeRed()
 {   
 #8
-   echo "Stage 8: installing Node-Red"
+   echo "Stage $Exec_install_nodered: installing Node-Red"
        
-   if [ "$Upgrade_requested"  ]
+   if [ "$Upgrade_requested" == 1 ]
       then
+      Do_SetNextStage $Exec_backup_solution
       return      #nothing to do
    fi
 
-   sudo npm install -g --unsafe-perm node-red
+
+   #sudo npm install -g --unsafe-perm node-red # since 2020-12-05, global install produces the following error :
+#        > publish-please@5.5.2 preinstall /home/neeo/.nvm/versions/node/v12.20.0/lib/node_modules/node-red/node_modules/publish-please
+#     > node lib/pre-install.js
+#
+#
+#     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#     !! Starting from v2.0.0 publish-please can't be installed globally.          !!
+#     !! Use local installation instead : 'npm install --save-dev publish-please', !!
+#     !! Or use npx if you do not want to install publish-please as a dependency.  !!
+#     !! (learn more: https://github.com/inikulin/publish-please#readme).          !!
+#     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+#     npm WARN optional SKIPPING OPTIONAL DEPENDENCY: fsevents@^2.1.2 (node_modules/node-red/node_modules/jest-haste-map/node_modules/fsevents):
+#     npm WARN notsup SKIPPING OPTIONAL DEPENDENCY: Unsupported platform for fsevents@2.2.1: wanted {"os":"darwin","arch":"any"} (current: {"os":"linux","arch":"arm"})
+#
+#     npm ERR! code ELIFECYCLE
+#     npm ERR! errno 1
+#     npm ERR! publish-please@5.5.2 preinstall: `node lib/pre-install.js`
+#     npm ERR! Exit status 1
+ 
+   pushd .
+   mkdir /steady/neeo-custom/.node-red
+   cd /steady/neeo-custom/.node-red
+   npm install --unsafe-perm node-red
    if [ "$?" -ne 0 ]
        then
         echo 'Install of NodeRed failed'
-        exit 12
+        GoOn=0
+        popd
+        return
     fi
-    echo "Stage 9" >> "$Statefile"
+    popd
+    Do_SetNextStage $Exec_backup_solution
 }
 
-
-Do_Setup_PM2()
-{
-#9
-   echo "Stage 9: Activating services in PM2"
-       
-   if [ "$Upgrade_requested"  ]
-      then
-      return      #nothing to do
-   fi
-
-   MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
-   if [ "$?" -ne 0 ]
-       then
-        echo 'sudo chmod 777 /steady/neeo-custom/pm2-meta/pub.sock' >> ~/.bashrc
-        echo 'sudo chmod 777 /steady/neeo-custom/pm2-meta/rpc.sock'>> ~/.bashrc
-   fi 
-   . ~/.bashrc
-   sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 startup
-   sudo chown neeo /steady/neeo-custom/pm2-meta/rpc.sock /steady/neeo-custom/pm2-meta/pub.sock
-
-   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
-   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start node-red -f  --node-args='--max-old-space-size=128'
-   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start /steady/neeo-custom/node_modules/\@jac459/metadriver/meta.js
-   sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 save
-    echo "Stage A" >> "$Statefile"
-}
-
-Do_Add_Backup_solution()
+function Do_Backup_solution()
 {
 #A
-   echo "Stage A: Setting up backup"
+   echo "Stage $Exec_backup_solution: Setting up backup"
 
-   if [ "$Upgrade_requested"  && "$InstalledVersion" \> "$Function_A_Introduced" ]
+   if [ "$Upgrade_requested" == 1 && "$InstalledVersion" \> "$Function_A_Introduced" ]
       then
+      Do_SetNextStage $Exec_setup_pm2
       return      #nothing to do
    fi
 
@@ -383,18 +479,66 @@ Do_Add_Backup_solution()
    if [ "$?" -ne 0 ]
        then
         echo 'Install of rsync failed'
-        exit 12
+        GoOn=0
+        return
     fi
-    echo "Stage B" >> "$Statefile"
+    Do_SetNextStage $Exec_setup_pm2
 
 }
 
-Do_Upgrade()
+function Do_Setup_PM2()
 {
-   if [[ ("$InstalledVersion"  = "1.0") && ("$Foundstage"="A") ]]        # fix the "old v1.0 Finish-action", so that is compatible with newer versions
+#9
+   echo "Stage $Exec_setup_pm2: Activating services in PM2"
+       
+   if [  "$UpgradeMetaOnly_requested" = "1" ]
+      then 
+         PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 restart meta.js
+         Do_SetNextStage $Exec_finish
+         return
+   fi 
+
+   MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
+   if [ "$?" -ne 0 ]
+       then
+        echo 'sudo chmod 777 /steady/neeo-custom/pm2-meta/pub.sock' >> ~/.bashrc
+        echo 'sudo chmod 777 /steady/neeo-custom/pm2-meta/rpc.sock'>> ~/.bashrc
+   fi 
+   sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 startup
+   sleep 5s
+   . ~/.bashrc
+   sudo chown neeo /steady/neeo-custom/pm2-meta/rpc.sock /steady/neeo-custom/pm2-meta/pub.sock
+   pushd .
+   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
+   echo "Result=$0"
+    if [[ "$0" != 0 ]]
+      then 
+      echo "Error adding mosquitto-start to PM2"
+   fi 
+   cd /steady/neeo-custom/.node-red/node_modules/node-red
+   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start red.js -f  --node-args='--max-old-space-size=128'
+   if [[ "$0" != 0 ]]
+      then 
+      echo "Error adding node-red-start to PM2"
+   fi 
+   cd /steady/neeo-custom/.meta/node_modules/\@jac459/metadriver
+   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start meta.js
+   if [[ "$0" != 0 ]]
+      then 
+      echo "Error adding meta-start to PM2"
+   fi 
+   popd
+   sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 save
+   Do_SetNextStage $Exec_finish
+}
+
+function Do_Upgrade()
+{
+   if [[ ("$InstalledVersion"  = "1.0") && ("$FoundStage"="A") ]]        # fix the "old v1.0 Finish-action", so that is compatible with newer versions
       then
       FoundStage="Z"
    fi
+
   
    if [ "$FoundStage" != "Z" ]  # Yes, but did we already have a completely installed system?
       then
@@ -406,15 +550,21 @@ Do_Upgrade()
          echo "No need to upgrade, you are already on the latest version ($LatestVersion)"
          Upgrade_requested=0       # reset update-request to no
      else
-         echo "We will be upgrading this installation from v$InstalledVersion into v$LatestVersion"
-         FoundStage=0
+         if [  "$UpgradeMetaOnly_requested" = "1" ]
+            then 
+            echo "We will be upgrading metadriver only; then we will restart metadriver"
+            Do_SetNextStage "$Exec_install_meta"
+         else
+            echo "We will be upgrading this installation from v$InstalledVersion into v$LatestVersion"
+            Do_SetNextStage "$Exec_all_stages"
+         fi 
      fi
    fi
 
 
 }    
 
-Do_Finish()
+function Do_Finish()
 {
 echo "$LatestVersion:"+$(date +"%Y-%m-%d %T") >>$VersionFile
 echo "We are done installng, your installation is now at level v$LatestVersion\n"
@@ -423,31 +573,37 @@ echo "We are done installng, your installation is now at level v$LatestVersion\n
 
 ##Main routine
 
-
+# first setup a cntrol-C handler
+trap no_ctrlc SIGINT
 
 if [ $# -gt 0 ]; then
   # Parsing any parameters passed to us
   while (( "$#" )); do
     case "$1" in
       --help)
-        usage && exit 0
+        usage && return
         shift
         ;;
       --reset)
         Do_Reset
         shift
         ;;
+      --meta-only)
+        Upgrade_requested=1
+        UpgradeMetaOnly_requested=1
+        shift
+        ;; 
       --upgrade)
         Upgrade_requested=1
         shift
         ;;   
       -*|--*=) # unsupported flags
         echo "Error: Unsupported flag $1" >&2
-        exit 1
+        return
         ;;
       *)
         echo "Please use correct format for arguments $1 not recognised" >&2
-        usage &&exit 1
+        usage &&return
         ;; 
     esac
   done
@@ -458,71 +614,57 @@ Do_ReadState                   # check to see if we ran before; if so, get the s
 echo $InstalledVersion
 
 echo "We are running in stage $FoundStage of 9"
-
-if [ "$Upgrade_requested"=1 ]
+if [ "$Upgrade_requested" == 1 ]
    then
       Do_Upgrade                                    # Check if upgrade is possible/allowed
       if [ "$Upgrade_requested" != 1 ]              # Did Do_Upgrade function made a decision overriding update-request?
          then
+         echo "Upgrade was rejected"
          return
       fi
    fi 
 
-#    case $FoundStage in
 
-GoOn=1
 while (( "$GoOn"==1 )); do
-    echo "$FoundStage"
+#    echo " case with $FoundStage"
     case $FoundStage in
-       0)
+       $Exec_mount_root_stage)
           Do_Mount_root
-          FoundStage=1
        ;;
-       1)
+       $Exec_setup_steady_stage)
           Do_Setup_steady_directory_struct
-          FoundStage=2
        ;;
-       2)
+       $Exec_reset_pacman)
           Do_Reset_Pacman
-          FoundStage=3
        ;;
-       3)
+       $Exec_install_nvm)
          Do_Install_NVM
-         FoundStage=4 
        ;;
-       4)
+       $Exec_finish_nvm)
          Do_Finish_NVM
-         FoundStage=5
        ;;
-       5)
+       $Exec_install_git)
           Do_Install_Git 
-          FoundStage=6
        ;;
-       6)
+       $Exec_install_meta)
           Do_Install_Meta 
-          FoundStage=7
        ;;
-       7)
+       $Exec_install_mosquitto)
           Do_Install_Mosquitto
-          FoundStage=8
        ;;
-       8)
+       $Exec_install_nodered)
           Do_Install_NodeRed
-          FoundStage=9
        ;;
-       9)
+       $Exec_setup_pm2)
           Do_Setup_PM2
-          FoundStage=A
        ;;
-       A)
-          Do_Add_Backup_solution
-          FoundStage=B
+       $Exec_backup_solution)
+          Do_Backup_solution
        ;;
-       B)
-          FoundStage=Z
-          echo "Stage Z" >> "$Statefile"           # If we've come here, FoundStage can be set to the max position: Z
+       $Exec_finish)                                          # this is just a placeholder
+          Do_SetNextStage $Exec_finish_done    # If we've come here, FoundStage can be set to the max position: Z
        ;;  
-       Z)
+       $Exec_finish_done)
           Do_Finish
           GoOn=0
        ;;       

@@ -30,6 +30,13 @@ login through ssh -i <key-ending with id_rsa> -l neeo
    3) type the command . .bashrc and enter ; this sets up links to the nvm-package that the installer failed to do.
    4) type again the command you entered before curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh' -k | bash
 
+We've noticed that the official site hosting the necessary archlinux-packages is quiote instable (overloaded).
+You will notice this with errors like these 
+"error: failed retrieving file 'krb5-1.18.2-1-armv7h.pkg.tar.xz' from mirror.archlinuxarm.org : The requested URL returned error: 502""
+Key in here is the error 502......  This is sometng we cannot solve, just rerun the installer the same way and it will pick up where it stopped.
+If you get an error stating "No such file or directory", then you've ended up in the wrong directory; just do a cd ~ and rerun installer. 
+You can just restart multiple times, eventually, the package will be downloaded and cached.
+
 That's it, you should now be able to see node-red as a webpage server from your brain: <IP-address Brain>:1880 in your browser
 
 If you receive errors during execution of pm2-commands, that is a known timing issue: authorisation on pm2-files is being set during logon. But if your login is earlier than pm2 has started, files will not be there. To solve it: execute . ~/.bashrc or logout and login again.
