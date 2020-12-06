@@ -63,6 +63,7 @@ Usage: $0 [options]
 Options: 
   --help            display this help and exits
   --reset           Start installer from scratch)
+  --meta-only       Only pull a new version of metadriver, and restart it
   --upgrade         Upgrade environment to add/improve functionality
 EOL
 }
@@ -118,6 +119,7 @@ function Do_SetNextStage()
       then 
       echo "error in setting nextstage; input for nextstage is empty"
       exit 12
+   fi
     FoundStage="$0"
     echo "Stage $0" >> "$Statefile"
 }
@@ -459,6 +461,7 @@ function Do_Upgrade()
          else
             echo "We will be upgrading this installation from v$InstalledVersion into v$LatestVersion"
             Do_SetNextStage $Exec_all_stages
+         fi 
      fi
    fi
 
