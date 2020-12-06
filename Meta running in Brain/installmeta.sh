@@ -499,22 +499,27 @@ function Do_Setup_PM2()
         echo 'sudo chmod 777 /steady/neeo-custom/pm2-meta/pub.sock' >> ~/.bashrc
         echo 'sudo chmod 777 /steady/neeo-custom/pm2-meta/rpc.sock'>> ~/.bashrc
    fi 
-   . ~/.bashrc
    sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 startup
+   sleep 5s
+   . ~/.bashrc
    sudo chown neeo /steady/neeo-custom/pm2-meta/rpc.sock /steady/neeo-custom/pm2-meta/pub.sock
    pushd .
-   sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
-   if [[ "$0" != 0 ]]
+   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
+   echo "Result=$0"
+    if [[ "$0" != 0 ]]
+      then 
       echo "Error adding mosquitto-start to PM2"
    fi 
    cd /steady/neeo-custom/.node-red/node_modules/node-red
-   sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start red.js -f  --node-args='--max-old-space-size=128'
+   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start red.js -f  --node-args='--max-old-space-size=128'
    if [[ "$0" != 0 ]]
+      then 
       echo "Error adding node-red-start to PM2"
    fi 
-   cd /steady/neeo-custom/node_modules/\@jac459/metadriver
-   sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start meta.js
+   cd /steady/neeo-custom/.meta/node_modules/\@jac459/metadriver
+   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start meta.js
    if [[ "$0" != 0 ]]
+      then 
       echo "Error adding meta-start to PM2"
    fi 
    popd
