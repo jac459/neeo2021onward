@@ -21,9 +21,13 @@
 # First, define some variables used in here
 Statedir="/steady/.installer"
 Statefile="$Statedir/state"
+FoundStage=0
 VersionFile="$Statedir/version"
 LatestVersion=1.1
 InstalledVersion=1.0  # assume that the first installer ran before.
+Upgrade_requested=0
+UpgradeMetaOnly_requested=0
+GoOn=1                # the main loop controller
 
 #Following table maintains the version where a new or changed functionality was introduced; used to check if we need to execute an upgrade for a function  
 Function_0_Introduced=1.0
@@ -55,7 +59,22 @@ Exec_finish=Y
 Exec_finish_done=Z
 
 # then define all functions that we are going to use.
-usage() {
+
+ctrlc_count=0
+
+function no_ctrlc()
+{
+    let ctrlc_count++
+    echo
+    if [[ $ctrlc_count == 1 ]]; then
+        echo "cntrl-C hit, please confirm with another cntrl-c."
+    elif [[ $ctrlc_count == 2 ]]; then
+        echo "That's it.  I quit."
+        exit
+    fi
+}
+
+function usage() {
   cat << EOL
 Installer for NEEO-Brain v$MyVersion 
 Usage: $0 [options]
@@ -94,13 +113,18 @@ function Do_ReadState()
       #FoundStage="0"  no longer needed                        # tell the installer we start from scratch
   fi
   LastLine=$(tail -n 1 "$Statefile")
-  StageID=$(echo "$LastLine" | cut -c1-6) 
-  if [ "$StageID" = "Stage " ]
-      then 
-      FoundStage=$(echo "$LastLine" | cut -c7-8) 
+  if [ "$LastLine" != "" ] 
+     then
+     StageID=$(echo "$LastLine" | cut -c1-6) 
+     if [ "$StageID" = "Stage " ]
+         then 
+         FoundStage=$(echo "$LastLine" | cut -c7-8) 
+     else
+         echo "Found $StageID but that doesn't match 'Stage '; so $FoundStage isn't valid either"
+         GoOn=0
+     fi
   else
-      echo "Found $StageID but that doesn't match 'Stage '; so $FoundStage isn't valid either"
-      GoOn=0
+     FoundStage=0 			  # file with state found, but with no content; assume it's not there and start at stage 0
   fi
 
   if [ -e "$VersionFile" ]                 # Now find out which version of the installer ran (will be in /steady/.install/version unless user removed it / never ran it
@@ -115,13 +139,14 @@ function Do_ReadState()
 
 function Do_SetNextStage()
 {
-   if [ "$0" = ""]
+   if [ "$1" = "" ]
       then 
       echo "error in setting nextstage; input for nextstage is empty"
       exit 12
    fi
-    FoundStage="$0"
-    echo "Stage $0" >> "$Statefile"
+    FoundStage="$1"
+    echo "Stage $1" >> "$Statefile"
+    echo "$FoundStage"
 }
 
 function Do_Mount_root()
@@ -129,8 +154,10 @@ function Do_Mount_root()
 #0
    echo "Stage 0: Setup a rewritable root-partition (includes entry in /etc/fstab)"
 
-   if [ "$Upgrade_requested"  ]
+   if [ "$Upgrade_requested" == 1   ]
       then 
+      echo "skip this step"
+      Do_SetNextStage $Exec_setup_steady_stage
       return      #nothing to do
    fi  
 
@@ -142,7 +169,7 @@ function Do_Mount_root()
       if [ "$?" -ne 0 ]
          then
          echo "The script failed" >&2
-         GoOn = 0
+         GoOn=0
          return  
       fi
    fi
@@ -153,7 +180,7 @@ function Do_Mount_root()
        if [ "$?" -ne 0 ]
          then
            echo "Coud not update fstab" >&2
-           GoOn = 0
+           GoOn=0
            return
         fi
        echo "/etc/fstab is now patched, continuing"
@@ -168,8 +195,9 @@ function Do_Setup_steady_directory_struct()
 #1  
    echo "Stage $Exec_setup_steady_stage: Setting up directories and rights"
 
-   if [ "$Upgrade_requested"  ] 
+   if [ "$Upgrade_requested" == 1   ] 
       then 
+      Do_SetNextStage $Exec_reset_pacman  
       return      #nothing to do
    fi
 
@@ -185,13 +213,14 @@ function Do_Reset_Pacman()
 #2
    echo "Stage $Exec_reset_pacman: Restoring pacman to a workable state"
 
-   if [ "$Upgrade_requested"  ] 
+   if [ "$Upgrade_requested" == 1  ] 
       then 
+       Do_SetNextStage $Exec_install_nvm
       return      #nothing to do
    fi
 
    MyPacmanVersion=$(pacman --version|grep 'Pacman v')
-   if [ "$MyPacmanVersion" = ".--. Pacman v5.2.2 - libalpm v12.0.2" ]
+   if [[ "$MyPacmanVersion" == *"v5.2.2"* ]]
       then
       echo "Pacman is already up-to-date"
    else
@@ -199,7 +228,7 @@ function Do_Reset_Pacman()
       if [ "$?" -ne 0 ]
           then
            echo 'error occured during pacman restore (pacman -Sy --noconfirm)'
-           GoOn = 0
+           GoOn=0
            return
       fi
       sudo pacman -S --force --noconfirm pacman
@@ -207,7 +236,7 @@ function Do_Reset_Pacman()
       if [ "$?" -ne 0 ]
           then
           echo 'error occured during pacman restore (pacman -S --force --noconfirm pacman)'
-          GoOn = 0
+          GoOn=0
           return
       fi
    fi   
@@ -221,8 +250,9 @@ function Do_Install_NVM()
 #3
     echo "Stage $Exec_install_nvm: installing NVM, then secondary npm&node"
        
-   if [ "$Upgrade_requested"  ]
+   if [ "$Upgrade_requested" == 1  ]
       then
+       Do_SetNextStage $Exec_finish_nvm
       return      #nothing to do
    fi
 
@@ -248,7 +278,7 @@ function Do_Install_NVM()
         echo 'This error happens sometimes and is easy to fix'
         echo 'Please execute the following command, then run installmeta again: . .bashrc (yes: dot blank dot!)'
         sleep 10s
-        GoOn = 0
+        GoOn=0
         return
     fi
     MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
@@ -266,8 +296,9 @@ function Do_Finish_NVM()
 #4
    echo "Stage $Exec_finish_nvm: Finishing setup npm&node"
        
-   if [ "$Upgrade_requested"  ]
+   if [ "$Upgrade_requested" == 1 ]
       then
+      Do_SetNextStage $Exec_install_git
       return      #nothing to do
    fi
 
@@ -277,7 +308,7 @@ function Do_Finish_NVM()
    if [ "$?" -ne 0 ]
       then
        echo 'Error installing npm (npm install npm -g)'
-       GoOn = 0
+       GoOn=0
        return
    fi
        popd 
@@ -290,8 +321,9 @@ function Do_Install_Git()
 #5
    echo "Stage $Exec_install_git: installing GIT"
        
-   if [ "$Upgrade_requested"  ]
+   if [ "$Upgrade_requested" == 1 ]
       then
+      Do_SetNextStage $Exec_install_meta
       return      #nothing to do
    fi
 
@@ -299,7 +331,7 @@ function Do_Install_Git()
    if [ "$?" -ne 0 ]
        then
         echo 'Install of Git failed'
-        GoOn = 0
+        GoOn=0
         return
     fi   
     Do_SetNextStage $Exec_install_meta
@@ -310,7 +342,7 @@ function Do_Install_Meta()
 #6
    echo "Stage $Exec_install_meta: installing Metadriver (JAC459/metadriver)"
        
-   #if [ "$Upgrade_requested"  ]
+   #if [ "$Upgrade_requested" == 1 ]
    #   then
    #   return                                                           # in tis case, upgrade will be requiresd
    #fi
@@ -320,7 +352,6 @@ function Do_Install_Meta()
        then 
       echo "/steady/pm2-meta already exist"
    else
-
       sudo mkdir pm2-meta
    fi
 
@@ -330,7 +361,7 @@ function Do_Install_Meta()
    if [ "$?" -ne 0 ]
        then
         echo 'Install of metadriver failed'
-        GoOn = 0
+        GoOn=0
         return
     fi
 
@@ -347,8 +378,9 @@ function Do_Install_Mosquitto()
 #7
    echo "Stage $Exec_install_mosquitto: installing Mosquitto"
        
-   if [ "$Upgrade_requested"  ]
+   if [ "$Upgrade_requested" == 1 ]
       then
+      Do_SetNextStage $Exec_install_nodered
       return      #nothing to do
    fi
 
@@ -357,7 +389,7 @@ function Do_Install_Mosquitto()
    if [ "$?" -ne 0 ]
        then
         echo 'Install of Mosquitto failed'
-        GoOn = 0
+        GoOn=0
         return
     fi  
     Do_SetNextStage $Exec_install_nodered 
@@ -368,18 +400,46 @@ function Do_Install_NodeRed()
 #8
    echo "Stage $Exec_install_nodered: installing Node-Red"
        
-   if [ "$Upgrade_requested"  ]
+   if [ "$Upgrade_requested" == 1 ]
       then
+      Do_SetNextStage $Exec_backup_solution
       return      #nothing to do
    fi
 
-   sudo npm install -g --unsafe-perm node-red
+
+   #sudo npm install -g --unsafe-perm node-red # since 2020-12-05, global install produces the following error :
+#        > publish-please@5.5.2 preinstall /home/neeo/.nvm/versions/node/v12.20.0/lib/node_modules/node-red/node_modules/publish-please
+#     > node lib/pre-install.js
+#
+#
+#     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#     !! Starting from v2.0.0 publish-please can't be installed globally.          !!
+#     !! Use local installation instead : 'npm install --save-dev publish-please', !!
+#     !! Or use npx if you do not want to install publish-please as a dependency.  !!
+#     !! (learn more: https://github.com/inikulin/publish-please#readme).          !!
+#     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+#     npm WARN optional SKIPPING OPTIONAL DEPENDENCY: fsevents@^2.1.2 (node_modules/node-red/node_modules/jest-haste-map/node_modules/fsevents):
+#     npm WARN notsup SKIPPING OPTIONAL DEPENDENCY: Unsupported platform for fsevents@2.2.1: wanted {"os":"darwin","arch":"any"} (current: {"os":"linux","arch":"arm"})
+#
+#     npm ERR! code ELIFECYCLE
+#     npm ERR! errno 1
+#     npm ERR! publish-please@5.5.2 preinstall: `node lib/pre-install.js`
+#     npm ERR! Exit status 1
+ 
+   pushd .
+   cd /steady/neeo-custom
+   mkdir .node-red
+   cd .node-red
+   sudo npm install --unsafe-perm node-red
    if [ "$?" -ne 0 ]
        then
         echo 'Install of NodeRed failed'
-        GoOn = 0
+        GoOn=0
+        popd
         return
     fi
+    popd
     Do_SetNextStage $Exec_backup_solution
 }
 
@@ -389,8 +449,9 @@ function Do_Backup_solution()
 #A
    echo "Stage $Exec_backup_solution: Setting up backup"
 
-   if [ "$Upgrade_requested"  && "$InstalledVersion" \> "$Function_A_Introduced" ]
+   if [ "$Upgrade_requested" == 1 && "$InstalledVersion" \> "$Function_A_Introduced" ]
       then
+      Do_SetNextStage $Exec_setup_pm2
       return      #nothing to do
    fi
 
@@ -398,7 +459,7 @@ function Do_Backup_solution()
    if [ "$?" -ne 0 ]
        then
         echo 'Install of rsync failed'
-        GoOn = 0
+        GoOn=0
         return
     fi
     Do_SetNextStage $Exec_setup_pm2
@@ -410,7 +471,7 @@ function Do_Setup_PM2()
 #9
    echo "Stage $Exec_setup_pm2: Activating services in PM2"
        
-   if [  "$UpgradeMetaOnly_requested" = "1"]
+   if [  "$UpgradeMetaOnly_requested" = "1" ]
       then 
          PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 restart meta.js
          Do_SetNextStage $Exec_finish
@@ -426,9 +487,10 @@ function Do_Setup_PM2()
    . ~/.bashrc
    sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 startup
    sudo chown neeo /steady/neeo-custom/pm2-meta/rpc.sock /steady/neeo-custom/pm2-meta/pub.sock
-
+   pushd .
    PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
-   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start node-red -f  --node-args='--max-old-space-size=128'
+   cd /steady/neeo-custom/.node-red/node_modules/node-red
+   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start red.js -f  --node-args='--max-old-space-size=128'
    pushd .
    cd /steady/neeo-custom/node_modules/\@jac459/metadriver
    PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start meta.js
@@ -443,24 +505,26 @@ function Do_Upgrade()
       then
       FoundStage="Z"
    fi
+
   
    if [ "$FoundStage" != "Z" ]  # Yes, but did we already have a completely installed system?
       then
       echo "Please let installer run first to a succesful end before upgrading: $FoundStage"
       Upgrade_requested=0       # reset update-request to no
    else
+
      if [ !  "$LatestVersion" \> "$InstalledVersion"  ]  # is the installed version lower than the latest availalbe version (My Version)?
         then
          echo "No need to upgrade, you are already on the latest version ($LatestVersion)"
          Upgrade_requested=0       # reset update-request to no
      else
-         if [  "$UpgradeMetaOnly_requested" = "1"]
+         if [  "$UpgradeMetaOnly_requested" = "1" ]
             then 
             echo "We will be upgrading metadriver only; then we will restart metadriver"
-            Do_SetNextStage $Exec_install_meta
+            Do_SetNextStage "$Exec_install_meta"
          else
             echo "We will be upgrading this installation from v$InstalledVersion into v$LatestVersion"
-            Do_SetNextStage $Exec_all_stages
+            Do_SetNextStage "$Exec_all_stages"
          fi 
      fi
    fi
@@ -477,7 +541,8 @@ echo "We are done installng, your installation is now at level v$LatestVersion\n
 
 ##Main routine
 
-
+# first setup a cntrol-C handler
+trap no_ctrlc SIGINT
 
 if [ $# -gt 0 ]; then
   # Parsing any parameters passed to us
@@ -517,29 +582,27 @@ Do_ReadState                   # check to see if we ran before; if so, get the s
 echo $InstalledVersion
 
 echo "We are running in stage $FoundStage of 9"
-
-if [ "$Upgrade_requested"=1 ]
+if [ "$Upgrade_requested" == 1 ]
    then
       Do_Upgrade                                    # Check if upgrade is possible/allowed
       if [ "$Upgrade_requested" != 1 ]              # Did Do_Upgrade function made a decision overriding update-request?
          then
+         echo "Upgrade was rejected"
          return
       fi
    fi 
 
-#    case $FoundStage in
 
-GoOn=1
 while (( "$GoOn"==1 )); do
-    echo "$FoundStage"
+#    echo " case with $FoundStage"
     case $FoundStage in
-       $Exec_backup_solution)
+       $Exec_mount_root_stage)
           Do_Mount_root
        ;;
        $Exec_setup_steady_stage)
           Do_Setup_steady_directory_struct
        ;;
-       Exec_reset_pacman)
+       $Exec_reset_pacman)
           Do_Reset_Pacman
        ;;
        $Exec_install_nvm)
