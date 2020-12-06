@@ -326,14 +326,19 @@ function Do_Install_Git()
       Do_SetNextStage $Exec_install_meta
       return      #nothing to do
    fi
-
-   sudo pacman -S --overwrite  '/*' --noconfirm  git
-   if [ "$?" -ne 0 ]
-       then
-        echo 'Install of Git failed'
-        GoOn=0
-        return
-    fi   
+  MyGit=$(command -v git)
+  if [[ "$MyGit" == "" ]]
+   then 
+      sudo pacman -S --overwrite  '/*' --noconfirm  git
+      if [ "$?" -ne 0 ]
+          then
+           echo 'Install of Git failed'
+         GoOn=0
+         return
+     fi
+   else
+      echo "Git is already installed"   
+   fi
     Do_SetNextStage $Exec_install_meta
 }
 
@@ -352,7 +357,7 @@ function Do_Install_Meta()
        then 
       echo "/steady/pm2-meta already exist"
    else
-      sudo mkdir pm2-meta
+      mkdir pm2-meta
    fi
 
    cd /steady/neeo-custom/ 
@@ -360,7 +365,7 @@ function Do_Install_Meta()
        then 
       echo "/steady/.meta already exist"
    else
-      sudo mkdir .meta
+      mkdir .meta
    fi
    cd .meta 
    npm install jac459/metadriver
@@ -437,7 +442,7 @@ function Do_Install_NodeRed()
    pushd .
    mkdir /steady/neeo-custom/.node-red
    cd /steady/neeo-custom/.node-red
-   sudo npm install --unsafe-perm node-red
+   npm install --unsafe-perm node-red
    if [ "$?" -ne 0 ]
        then
         echo 'Install of NodeRed failed'
@@ -448,7 +453,6 @@ function Do_Install_NodeRed()
     popd
     Do_SetNextStage $Exec_backup_solution
 }
-
 
 function Do_Backup_solution()
 {
