@@ -29,6 +29,8 @@ login through ssh -i <key-ending with id_rsa> -l neeo
 
 That's it, you should now be able to see node-red as a webpage server from your brain: <IP-address Brain>:1880 in your browser
 
+If you receive errors during execution of pm2-commands, that is a known timing issue: authorisation on pm2-files is being set during logon. But if your login is earlier than pm2 has started, files will not be there. To solve it: execute . ~/.bashrc or logout and login again.
+
 All of the meta-services (mosquitto, node-red and metadriver) are started under a user-version of PM2, leaving NEEO's processes alone. 
 Most users will only be interested in the new user-services, so we have added assignment of PM2_HOME to the user-directory for PM2 (in .bashrc). 
 You can check the status of these user services with this command:

@@ -358,10 +358,10 @@ Do_Setup_PM2()
 #9
    echo "Stage 9: Activating services in PM2"
        
-   if [ "$Upgrade_requested"  ]
-      then
-      return      #nothing to do
-   fi
+   #if [ "$Upgrade_requested"  ]
+   #   then
+   #   return      #nothing to do
+   #fi
 
    MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
    if [ "$?" -ne 0 ]
@@ -375,7 +375,15 @@ Do_Setup_PM2()
 
    PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
    PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start node-red -f  --node-args='--max-old-space-size=128'
-   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start /steady/neeo-custom/node_modules/\@jac459/metadriver/meta.js
+   if [ "$(echo "$MyPM2" | grep 'meta')" != "" ]
+      then
+      echo "deleting old pm2 for meta"
+      PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 delete meta           #Always remove meta and add it again, as the first installer had a 
+   fi
+   pushd .
+   cd /steady/neeo-custom/node_modules/\@jac459/metadriver
+   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start meta.js -f
+   popd
    sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 save
     echo "Stage A" >> "$Statefile"
 }
