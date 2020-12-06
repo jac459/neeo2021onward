@@ -3,7 +3,10 @@ Below are all the commands that need to run on your freshly rooted brain.
 As the /steady directory is only partially cleaned during a firmware upgrade and you might have installed some things there, 
 let's make sure that the older stuff is removed before we are going to start the installer.
 This is purely, because I expect the brain to be freshly rooted, not full of remnants of other tries.
-Normally, cleanup should not be necessary because people will follow you installation-vioeo;-)
+
+
+NORMALLY, cleanup should not be necessary
+
 
 Removal old stuff:
 login through ssh
@@ -28,6 +31,8 @@ login through ssh -i <key-ending with id_rsa> -l neeo
    4) type again the command you entered before curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh' -k | bash
 
 That's it, you should now be able to see node-red as a webpage server from your brain: <IP-address Brain>:1880 in your browser
+
+If you receive errors during execution of pm2-commands, that is a known timing issue: authorisation on pm2-files is being set during logon. But if your login is earlier than pm2 has started, files will not be there. To solve it: execute . ~/.bashrc or logout and login again.
 
 All of the meta-services (mosquitto, node-red and metadriver) are started under a user-version of PM2, leaving NEEO's processes alone. 
 Most users will only be interested in the new user-services, so we have added assignment of PM2_HOME to the user-directory for PM2 (in .bashrc). 
