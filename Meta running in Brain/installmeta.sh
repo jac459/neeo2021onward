@@ -560,12 +560,10 @@ function Do_Setup_PM2()
          Do_SetNextStage $Exec_finish
          return
    fi 
-   pushdir .
+   pushd .
    cd /steady/neeo-custom
-   if [[ -e "pm2-meta" ]]
+   if [[ !-e "pm2-meta" ]]
        then
-      echo "/steady/neeo-custom/pm2-meta already exist"
-   else
       mkdir pm2-meta
    fi
 
@@ -655,7 +653,7 @@ function Do_Upgrade()
 function Do_Finish()
 {
 echo "$LatestVersion:"+$(date +"%Y-%m-%d %T") >>$VersionFile
-echo "We are done installng, your installation is now at level v$LatestVersion\n"
+echo "We are done installng, your installation is now at level v$LatestVersion"
 
 }
 
