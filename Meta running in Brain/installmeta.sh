@@ -13,7 +13,7 @@
 #  5; Directly after the reboot, installer restarted
 #  6; Setting up user-envir for PM2, installing npm and meta
 #  7; Installing mosquitto and nodered
-#  8; Adding users (mosquitto, changing profile for neeo-user to chmod /steady/neeo-custom/pm2-meta/pub.sock & /steady/neeo-custom/pm2-meta/rpc.sock to 777
+#  8; Adding users (mosquitto, changing profile for neeo-user to chmod /steady/neeo-custom/.pm2/pub.sock & /steady/neeo-custom/.pm2/rpc.sock to 777
 #  9; Setting up autopstart via PM2
 #  9; Signalling we have run seuccesfully  
 
@@ -307,10 +307,10 @@ function Do_Install_NVM()
         GoOn=0
         return
     fi
-    MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
+    MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/.pm2')   # add some usefull commands to .bashrc to make life easier
     if [ "$?" -ne 0 ]
        then
-        echo 'export PM2_HOME=/steady/neeo-custom/pm2-meta' >> ~/.bashrc
+        echo 'export PM2_HOME=/steady/neeo-custom/.pm2' >> ~/.bashrc
     fi
     Do_SetNextStage $Exec_finish_nvm
 
@@ -556,42 +556,42 @@ function Do_Setup_PM2()
        
    if [  "$UpgradeMetaOnly_requested" == "1" ]
       then 
-         PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 restart meta
+         PM2_HOME='/steady/neeo-custom/.pm2' pm2 restart meta
          Do_SetNextStage $Exec_finish
          return
    fi 
    pushd .
    cd /steady/neeo-custom
-   if [[ !-e "pm2-meta" ]]
+   if [[ !-e ".pm2" ]]
        then
-      mkdir pm2-meta
+      mkdir .pm2
    fi
 
-   MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
+   MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/.pm2')   # add some usefull commands to .bashrc to make life easier
    if [ "$?" -ne 0 ]
        then
-        echo 'sudo chmod 777 /steady/neeo-custom/pm2-meta/pub.sock' >> ~/.bashrc
-        echo 'sudo chmod 777 /steady/neeo-custom/pm2-meta/rpc.sock'>> ~/.bashrc
+        echo 'sudo chmod 777 /steady/neeo-custom/.pm2/pub.sock' >> ~/.bashrc
+        echo 'sudo chmod 777 /steady/neeo-custom/.pm2/rpc.sock'>> ~/.bashrc
    fi 
-   sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 startup
+   sudo PM2_HOME='/steady/neeo-custom/.pm2' pm2 startup
    sleep 5s
    . ~/.bashrc
-   sudo chown neeo /steady/neeo-custom/pm2-meta/rpc.sock /steady/neeo-custom/pm2-meta/pub.sock
+   sudo chown neeo /steady/neeo-custom/.pm2/rpc.sock /steady/neeo-custom/.pm2/pub.sock
 
-   MyPM2=$(PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 list)
+   MyPM2=$(PM2_HOME='/steady/neeo-custom/.pm2' pm2 list)
    if [[ $(echo "$MyPM2" | grep -i 'mosquitto') == "" ]]
        then
-       PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 restart mosquitto
+       PM2_HOME='/steady/neeo-custom/.pm2' pm2 restart mosquitto
    else
-       PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
+       PM2_HOME='/steady/neeo-custom/.pm2' pm2 start mosquitto
    fi   
 
    if [[ $(echo "$MyPM2" | grep -i 'node-red') == "" ]];
       then 
       cd /steady/neeo-custom/.node-red/node_modules/node-red
-      PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start node-red.js -f  --node-args='--max-old-space-size=128'
+      PM2_HOME='/steady/neeo-custom/.pm2' pm2 start node-red.js -f  --node-args='--max-old-space-size=128'
    else 
-      PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 restart node-red
+      PM2_HOME='/steady/neeo-custom/.pm2' pm2 restart node-red
    fi
    if [[ "$1" != 0 ]]
       then 
@@ -602,9 +602,9 @@ function Do_Setup_PM2()
    if [[ $(echo "$MyPM2" | grep -i 'meta') == "" ]];
       then    
       cd /steady/neeo-custom/.meta/node_modules/\@jac459/metadriver
-      PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start meta.js
+      PM2_HOME='/steady/neeo-custom/.pm2' pm2 start meta.js
    else 
-      PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 restart meta
+      PM2_HOME='/steady/neeo-custom/.pm2' pm2 restart meta
    fi 
    if [[ "$1" != 0 ]]
       then 
@@ -613,7 +613,7 @@ function Do_Setup_PM2()
 
    popd
 
-   sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 save
+   sudo PM2_HOME='/steady/neeo-custom/.pm2' pm2 save
    Do_SetNextStage $Exec_finish
 }
 
