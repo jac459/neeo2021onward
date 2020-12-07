@@ -34,6 +34,8 @@ We've noticed that the official site hosting the necessary archlinux-packages is
 You will notice this with errors like these 
 "error: failed retrieving file 'krb5-1.18.2-1-armv7h.pkg.tar.xz' from mirror.archlinuxarm.org : The requested URL returned error: 502""
 Key in here is the error 502......  This is sometng we cannot solve, just rerun the installer the same way and it will pick up where it stopped.
+I've now changed the code to retry failed installations for 10 times, that solved my problems with 502-errors.
+
 If you get an error stating "No such file or directory", then you've ended up in the wrong directory; just do a cd ~ and rerun installer. 
 You can just restart multiple times, eventually, the package will be downloaded and cached.
 

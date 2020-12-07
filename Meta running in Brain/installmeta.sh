@@ -227,7 +227,7 @@ function Do_Reset_Pacman()
    else
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while  [  $NoSuccessYet ]  && [ "$MyRetries" -gt 0  ]; do
+      while  [  $NoSuccessYet ] ; do
          sudo pacman -Sy --noconfirm
          if [ "$?" -ne 0 ]
              then
@@ -247,7 +247,7 @@ function Do_Reset_Pacman()
 
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while  [  $NoSuccessYet ]  && [ "$MyRetries" -gt 0  ]; do
+      while  [  $NoSuccessYet ] ; do
          sudo pacman -S --force --noconfirm pacman
          if [ "$?" -ne 0 ]
              then
@@ -295,14 +295,14 @@ function Do_Install_NVM()
         echo 'export NVM_DIR="$HOME/.nvm" ' >> ~/.bashrc
         echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm'>> ~/.bashrc
     fi
-    . .bashrc   
+    . ~/.bashrc   
     nvm install --lts=erbium
     if [ "$?" -ne 0 ]
        then
         echo 'Error installing npm&node (nvm install --lts=erbium)'
 
         echo 'This error happens sometimes and is easy to fix'
-        echo 'Please execute the following command, then run installmeta again: . .bashrc (yes: dot blank dot!)'
+        echo 'Please execute the following command, then run installmeta again: . ~/.bashrc (yes: dot blank dot!)'
         sleep 10s
         GoOn=0
         return
@@ -438,7 +438,7 @@ function Do_Install_Mosquitto()
       sudo useradd -u 1002 mosquitto
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while  [  $NoSuccessYet ]  && [ "$MyRetries" -gt 0  ]; do
+      while  [  $NoSuccessYet ] ; do
          sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
          if [ "$?" -ne 0 ]
              then
@@ -527,7 +527,7 @@ function Do_Backup_solution()
       then 
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while  [  $NoSuccessYet ]  && [ "$MyRetries" -gt 0  ]; do
+      while  [  $NoSuccessYet ] ; do
          sudo pacman -S --overwrite  '/*' --noconfirm  rsync
          if [ "$?" -ne 0 ]
              then
