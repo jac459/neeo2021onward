@@ -362,7 +362,7 @@ function Do_Install_Git()
       then 
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while  [  $NoSuccessYet ]  && [ "$MyRetries" -gt 0  ]; do
+      while  [  $NoSuccessYet -eq 1 ] ; do
          sudo pacman -S --overwrite  '/*' --noconfirm  git
          if [ "$?" -ne 0 ]
              then
@@ -581,10 +581,14 @@ function Do_Setup_PM2()
    MyPM2=$(PM2_HOME='/steady/neeo-custom/.pm2' pm2 list)
    if [[ $(echo "$MyPM2" | grep -i 'mosquitto') == "" ]]
        then
-       PM2_HOME='/steady/neeo-custom/.pm2' pm2 restart mosquitto
-   else
        PM2_HOME='/steady/neeo-custom/.pm2' pm2 start mosquitto
+   else
+       PM2_HOME='/steady/neeo-custom/.pm2' pm2 restart mosquitto
    fi   
+   if [[ "$?" != 0 ]]
+      then 
+      echo "Error adding mosquitto-start to PM2"
+   fi 
 
    if [[ $(echo "$MyPM2" | grep -i 'node-red') == "" ]];
       then 
@@ -593,7 +597,7 @@ function Do_Setup_PM2()
    else 
       PM2_HOME='/steady/neeo-custom/.pm2' pm2 restart node-red
    fi
-   if [[ "$1" != 0 ]]
+   if [[ "$?" != 0 ]]
       then 
       echo "Error adding node-red-start to PM2"
    fi 
@@ -606,7 +610,7 @@ function Do_Setup_PM2()
    else 
       PM2_HOME='/steady/neeo-custom/.pm2' pm2 restart meta
    fi 
-   if [[ "$1" != 0 ]]
+   if [[ "$?" != 0 ]]
       then 
       echo "Error adding meta-start to PM2"
    fi
