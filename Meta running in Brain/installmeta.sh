@@ -28,6 +28,7 @@ InstalledVersion=1.0  # assume that the first installer ran before.
 Upgrade_requested=0
 UpgradeMetaOnly_requested="0"
 GoOn=1                # the main loop controller
+RetryCountPacman=10   # becasue of the instability of some archlinux repositories, url-error 502 might occur
 
 #Following table maintains the version where a new or changed functionality was introduced; used to check if we need to execute an upgrade for a function  
 Function_0_Introduced=1.0
@@ -224,21 +225,46 @@ function Do_Reset_Pacman()
       then
       echo "Pacman is already up-to-date"
    else
-      sudo pacman -Sy --noconfirm
-      if [ "$?" -ne 0 ]
-          then
-           echo 'error occured during pacman restore (pacman -Sy --noconfirm)'
-           GoOn=0
-           return
-      fi
-      sudo pacman -S --force --noconfirm pacman
+      MyRetries=$RetryCountPacman
+      NoSuccessYet=1
+      while (( $MyRetries -gt 0 ) && ($NoSuccessYet)); do
+         sudo pacman -Sy --noconfirm
+         if [ "$?" -ne 0 ]
+             then
+             if [[ $MyRetries -gt 1 ]]
+                then 
+                echo 'Error occured during pacman restore (pacman -Sy --noconfirm) - retrying'
+             else 
+               echo 'Error occured during pacman restore (pacman -Sy --noconfirm); giving up'
+               GoOn=0
+               return
+             fi          
+         else
+          NoSuccessYet=0       # signal done, break the loop
+         fi
+         $MyRetries=$MyRetries-1
+      done 
 
-      if [ "$?" -ne 0 ]
-          then
-          echo 'error occured during pacman restore (pacman -S --force --noconfirm pacman)'
-          GoOn=0
-          return
-      fi
+      MyRetries=$RetryCountPacman
+      NoSuccessYet=1
+      while (( $MyRetries -gt 0 ) && ($NoSuccessYet)); do
+         sudo pacman -S --force --noconfirm pacman
+         if [ "$?" -ne 0 ]
+             then
+             if [[ $MyRetries -gt 1 ]]
+                then 
+                echo 'Error occured during pacman restore (pacman -S --force --noconfirm pacman) - retrying'
+             else 
+               echo 'Error occured during pacman restore (pacman -S --force --noconfirm pacman); giving up'
+               GoOn=0
+               return
+             fi          
+         else
+          NoSuccessYet=0       # signal done, break the loop
+         fi
+         $MyRetries=$MyRetries-1
+      done 
+
    fi   
    Do_SetNextStage $Exec_install_nvm
 
@@ -307,7 +333,7 @@ function Do_Finish_NVM()
    else
       pushd . 
       cd /steady/neeo-custom/
-      npm install npm -g
+      npm install npm -g  --no-fund
       if [ "$?" -ne 0 ]
          then
           echo 'Error installing npm (npm install npm -g)'
@@ -333,18 +359,32 @@ function Do_Install_Git()
    fi
   MyGit=$(command -v git)
   if [[ "$MyGit" == "" ]]
-   then 
-      sudo pacman -S --overwrite  '/*' --noconfirm  git
-      if [ "$?" -ne 0 ]
-          then
-           echo 'Install of Git failed'
-         GoOn=0
-         return
+      then 
+      MyRetries=$RetryCountPacman
+      NoSuccessYet=1
+      while (( $MyRetries -gt 0 ) && ($NoSuccessYet)); do
+         sudo pacman -S --overwrite  '/*' --noconfirm  git
+         if [ "$?" -ne 0 ]
+             then
+             if [[ $MyRetries -gt 1 ]]
+                then 
+                echo 'Error occured during Install of Git - retrying'
+             else 
+               echo ' Error occured during Install of Git - giving up'
+               GoOn=0
+               return
+             fi          
+         else
+          NoSuccessYet=0       # signal done, break the loop
+         fi
+         $MyRetries=$MyRetries-1
+      done
      fi
    else
       echo "Git is already installed"   
    fi
     Do_SetNextStage $Exec_install_meta
+
 }
 
 function Do_Install_Meta()
@@ -366,7 +406,7 @@ function Do_Install_Meta()
       mkdir .meta
    fi
    cd .meta 
-   npm install jac459/metadriver
+   npm install jac459/metadriver  --no-fund
    if [ "$?" -ne 0 ]
        then
         echo 'Install of metadriver failed'
@@ -393,15 +433,30 @@ function Do_Install_Mosquitto()
       Do_SetNextStage $Exec_install_nodered
       return      #nothing to do
    fi
-
-   sudo useradd -u 1002 mosquitto
-   sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
-   if [ "$?" -ne 0 ]
-       then
-        echo 'Install of Mosquitto failed'
-        GoOn=0
-        return
-    fi  
+  MyMosquitto=$(command -v mosquitto)
+   if [[ "$MyMosquitto" == "" ]]
+      then 
+      sudo useradd -u 1002 mosquitto
+      MyRetries=$RetryCountPacman
+      NoSuccessYet=1
+      while (( $MyRetries -gt 0 ) && ($NoSuccessYet)); do
+         sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
+         if [ "$?" -ne 0 ]
+             then
+             if [[ $MyRetries -gt 1 ]]
+                then 
+                echo 'Error occured during Install of Mosquitto - retrying'
+             else 
+               echo ' Error occured during Install of Mosquitto - giving up'
+               GoOn=0
+               return
+             fi          
+         else
+          NoSuccessYet=0       # signal done, break the loop
+         fi
+         $MyRetries=$MyRetries-1
+      done
+   fi 
     Do_SetNextStage $Exec_install_nodered 
 }
 
@@ -440,7 +495,7 @@ function Do_Install_NodeRed()
    pushd .
    mkdir /steady/neeo-custom/.node-red
    cd /steady/neeo-custom/.node-red
-   npm install --unsafe-perm node-red
+   npm install --unsafe-perm node-red  --no-fund
    if [ "$?" -ne 0 ]
        then
         echo 'Install of NodeRed failed'
@@ -465,14 +520,30 @@ function Do_Backup_solution()
       return      #nothing to do
    fi
 
-   sudo pacman -S --overwrite  '/*' --noconfirm  rsync
-   if [ "$?" -ne 0 ]
-       then
-        echo 'Install of rsync failed'
-        GoOn=0
-        return
-    fi
-    Do_SetNextStage $Exec_setup_pm2
+  MyRSync=$(command -v rsync)
+   if [[ "$MyRSync" == "" ]]
+      then 
+      MyRetries=$RetryCountPacman
+      NoSuccessYet=1
+      while (( $MyRetries -gt 0 ) && ($NoSuccessYet)); do
+         sudo pacman -S --overwrite  '/*' --noconfirm  rsync
+         if [ "$?" -ne 0 ]
+             then
+             if [[ $MyRetries -gt 1 ]]
+                then 
+                echo 'Error occured during Install of rsync - retrying'
+             else 
+               echo ' Error occured during Install of rsync - giving up'
+               GoOn=0
+               return
+             fi          
+         else
+          NoSuccessYet=0       # signal done, break the loop
+         fi
+         $MyRetries=$MyRetries-1
+      done 
+   fi 
+   Do_SetNextStage $Exec_setup_pm2
 
 }
 
