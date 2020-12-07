@@ -227,7 +227,7 @@ function Do_Reset_Pacman()
    else
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while  [  $NoSuccessYet ] ; do
+      while  [  $NoSuccessYet -ne 0 ] ; do
          sudo pacman -Sy --noconfirm
          if [ "$?" -ne 0 ]
              then
@@ -247,7 +247,7 @@ function Do_Reset_Pacman()
 
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while  [  $NoSuccessYet ] ; do
+      while  [  $NoSuccessYet -ne 0 ] ; do
          sudo pacman -S --force --noconfirm pacman
          if [ "$?" -ne 0 ]
              then
@@ -438,7 +438,7 @@ function Do_Install_Mosquitto()
       sudo useradd -u 1002 mosquitto
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while  [  $NoSuccessYet ] ; do
+      while  [  $NoSuccessYet -ne 0 ] ; do
          sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
          if [ "$?" -ne 0 ]
              then
@@ -527,7 +527,7 @@ function Do_Backup_solution()
       then 
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while  [  $NoSuccessYet ] ; do
+      while  [  $NoSuccessYet -ne 0 ] ; do
          sudo pacman -S --overwrite  '/*' --noconfirm  rsync
          if [ "$?" -ne 0 ]
              then
