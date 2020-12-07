@@ -329,7 +329,6 @@ function Do_Finish_NVM()
    MyNPM=$(npm -v)
    if [[ "$MyNPM" == "6.14.9" ]]
       then
-      
       echo "NPM 6.14.9 was already installed, skipping" 
    else
       pushd . 
@@ -399,11 +398,10 @@ function Do_Install_Meta()
    pushd .
 
    cd /steady/neeo-custom/ 
-   if [[ -e ".meta" -ne 1 ]]
+   if [[ ! -f  ".meta"  ]]
        then 
-#      echo "/steady/.meta already exist"
+#      echo "/steady/neeo-custom/.meta already exist"
 #   else
- 
       mkdir .meta
    fi
    cd .meta 
@@ -493,21 +491,24 @@ function Do_Install_NodeRed()
 #     npm ERR! publish-please@5.5.2 preinstall: `node lib/pre-install.js`
 #     npm ERR! Exit status 1
  
-   pushd .
-   mkdir /steady/neeo-custom/.node-red
-   cd /steady/neeo-custom/.node-red
-   npm install --unsafe-perm node-red  --no-fund
-   if [ "$?" -ne 0 ]
-       then
-        echo 'Install of NodeRed failed'
-        GoOn=0
-        popd
-        return
-    fi
-    cd /steady/neeo-custom/.node-red/node_modules/node-red
-    ln -s red.js node-red.js
-    popd
-    Do_SetNextStage $Exec_backup_solution
+   if [[ ! -e /steady/neeo-custom/.node-red/node_modules/node-red/red.js]]
+      then 
+      pushd .
+      mkdir /steady/neeo-custom/.node-red
+      cd /steady/neeo-custom/.node-red
+      npm install --unsafe-perm node-red  --no-fund
+      if [ "$?" -ne 0 ]
+          then
+         echo 'Install of NodeRed failed'
+         GoOn=0
+         popd
+         return
+      fi
+      cd /steady/neeo-custom/.node-red/node_modules/node-red
+      ln -s red.js node-red.js
+      popd
+   fi 
+   Do_SetNextStage $Exec_backup_solution
 }
 
 function Do_Backup_solution()
@@ -515,7 +516,7 @@ function Do_Backup_solution()
 #A
    echo "Stage $Exec_backup_solution: Setting up backup"
 
-   if [ "$Upgrade_requested" == 1 && "$InstalledVersion" \> "$Function_A_Introduced" ]
+   if [ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_A_Introduced" ]
       then
       Do_SetNextStage $Exec_setup_pm2
       return      #nothing to do
