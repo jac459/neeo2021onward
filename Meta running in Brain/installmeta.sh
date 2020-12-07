@@ -326,9 +326,10 @@ function Do_Finish_NVM()
       Do_SetNextStage $Exec_install_git
       return      #nothing to do
    fi
-   MyNPM=$(nvm -v)
-   if [[ "$MyNPM|" == "6.14.9" ]]
+   MyNPM=$(npm -v)
+   if [[ "$MyNPM" == "6.14.9" ]]
       then
+      
       echo "NPM 6.14.9 was already installed, skipping" 
    else
       pushd . 
@@ -379,7 +380,6 @@ function Do_Install_Git()
          fi
          $MyRetries=$MyRetries-1
       done
-     fi
    else
       echo "Git is already installed"   
    fi
@@ -399,10 +399,11 @@ function Do_Install_Meta()
    pushd .
 
    cd /steady/neeo-custom/ 
-   if [[ -e ".meta" ]]
+   if [[ -e ".meta" -ne 1 ]]
        then 
-      echo "/steady/.meta already exist"
-   else
+#      echo "/steady/.meta already exist"
+#   else
+ 
       mkdir .meta
    fi
    cd .meta 
@@ -567,8 +568,6 @@ function Do_Setup_PM2()
       mkdir pm2-meta
    fi
 
-
-
    MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
    if [ "$?" -ne 0 ]
        then
@@ -580,25 +579,41 @@ function Do_Setup_PM2()
    . ~/.bashrc
    sudo chown neeo /steady/neeo-custom/pm2-meta/rpc.sock /steady/neeo-custom/pm2-meta/pub.sock
 
-   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
-   echo "Result=$0"
-    if [[ "$0" != 0 ]]
+   MyPM2=$(PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 list)
+   if [[ $(echo "$MyPM2" | grep -i 'mosquitto') == "" ]]
+       then
+       PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 restart mosquitto
+   else
+       PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
+   fi   
+
+   if [[ $(echo "$MyPM2" | grep -i 'node-red') == "" ]];
       then 
-      echo "Error adding mosquitto-start to PM2"
-   fi 
-   cd /steady/neeo-custom/.node-red/node_modules/node-red
-   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start node-red.js -f  --node-args='--max-old-space-size=128'
-   if [[ "$0" != 0 ]]
+      cd /steady/neeo-custom/.node-red/node_modules/node-red
+      PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start node-red.js -f  --node-args='--max-old-space-size=128'
+   else 
+      PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 restart node-red
+   fi
+   if [[ "$1" != 0 ]]
       then 
       echo "Error adding node-red-start to PM2"
    fi 
-   cd /steady/neeo-custom/.meta/node_modules/\@jac459/metadriver
-   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start meta.js
-   if [[ "$0" != 0 ]]
+
+
+   if [[ $(echo "$MyPM2" | grep -i 'meta') == "" ]];
+      then    
+      cd /steady/neeo-custom/.meta/node_modules/\@jac459/metadriver
+      PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start meta.js
+   else 
+      PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 restart meta
+   fi 
+   if [[ "$1" != 0 ]]
       then 
       echo "Error adding meta-start to PM2"
-   fi 
+   fi
+
    popd
+
    sudo PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 save
    Do_SetNextStage $Exec_finish
 }
