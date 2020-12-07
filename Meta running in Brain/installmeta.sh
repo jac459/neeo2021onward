@@ -26,7 +26,7 @@ VersionFile="$Statedir/version"
 LatestVersion=1.1
 InstalledVersion=1.0  # assume that the first installer ran before.
 Upgrade_requested=0
-UpgradeMetaOnly_requested=0
+UpgradeMetaOnly_requested="0"
 GoOn=1                # the main loop controller
 
 #Following table maintains the version where a new or changed functionality was introduced; used to check if we need to execute an upgrade for a function  
@@ -201,11 +201,6 @@ function Do_Setup_steady_directory_struct()
       return      #nothing to do
    fi
 
-   if [ "$Upgrade_requested"  ] 
-      then 
-      return      #nothing to do
-   fi
-
    sudo mkdir /steady/neeo-custom
    sudo chown neeo:wheel /steady/neeo-custom
    sudo chmod -R 775 /steady/neeo-custom
@@ -362,13 +357,6 @@ function Do_Install_Meta()
    #   return                                                           # in tis case, upgrade will be requiresd
    #fi
    pushd .
-   cd /steady
-   if [[ -e "pm2-meta" ]]
-       then 
-      echo "/steady/pm2-meta already exist"
-   else
-      mkdir pm2-meta
-   fi
 
    cd /steady/neeo-custom/ 
    if [[ -e ".meta" ]]
@@ -387,7 +375,7 @@ function Do_Install_Meta()
         return
     fi
    popd 
-   if [  "$UpgradeMetaOnly_requested" = "1"]
+   if [  "$UpgradeMetaOnly_requested" == "1" ]
        then
        Do_SetNextStage $Exec_setup_pm2
    else
@@ -460,6 +448,8 @@ function Do_Install_NodeRed()
         popd
         return
     fi
+    cd /steady/neeo-custom/.node-red/node_modules/node-red
+    ln -s red.js node-red.js
     popd
     Do_SetNextStage $Exec_backup_solution
 }
@@ -488,15 +478,25 @@ function Do_Backup_solution()
 
 function Do_Setup_PM2()
 {
-#9
+#X
    echo "Stage $Exec_setup_pm2: Activating services in PM2"
        
-   if [  "$UpgradeMetaOnly_requested" = "1" ]
+   if [  "$UpgradeMetaOnly_requested" == "1" ]
       then 
-         PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 restart meta.js
+         PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 restart meta
          Do_SetNextStage $Exec_finish
          return
    fi 
+   pushdir .
+   cd /steady/neeo-custom
+   if [[ -e "pm2-meta" ]]
+       then
+      echo "/steady/neeo-custom/pm2-meta already exist"
+   else
+      mkdir pm2-meta
+   fi
+
+
 
    MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/pm2-meta')   # add some usefull commands to .bashrc to make life easier
    if [ "$?" -ne 0 ]
@@ -508,7 +508,7 @@ function Do_Setup_PM2()
    sleep 5s
    . ~/.bashrc
    sudo chown neeo /steady/neeo-custom/pm2-meta/rpc.sock /steady/neeo-custom/pm2-meta/pub.sock
-   pushd .
+
    PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start mosquitto
    echo "Result=$0"
     if [[ "$0" != 0 ]]
@@ -516,7 +516,7 @@ function Do_Setup_PM2()
       echo "Error adding mosquitto-start to PM2"
    fi 
    cd /steady/neeo-custom/.node-red/node_modules/node-red
-   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start red.js -f  --node-args='--max-old-space-size=128'
+   PM2_HOME='/steady/neeo-custom/pm2-meta' pm2 start node-red.js -f  --node-args='--max-old-space-size=128'
    if [[ "$0" != 0 ]]
       then 
       echo "Error adding node-red-start to PM2"
@@ -545,20 +545,21 @@ function Do_Upgrade()
       echo "Please let installer run first to a succesful end before upgrading: $FoundStage"
       Upgrade_requested=0       # reset update-request to no
    else
-     if [ !  "$LatestVersion" \> "$InstalledVersion"  ]  # is the installed version lower than the latest availalbe version (My Version)?
-        then
-         echo "No need to upgrade, you are already on the latest version ($LatestVersion)"
-         Upgrade_requested=0       # reset update-request to no
-     else
-         if [  "$UpgradeMetaOnly_requested" = "1" ]
+      if [  "$UpgradeMetaOnly_requested" == "1" ]
             then 
             echo "We will be upgrading metadriver only; then we will restart metadriver"
             Do_SetNextStage "$Exec_install_meta"
-         else
-            echo "We will be upgrading this installation from v$InstalledVersion into v$LatestVersion"
-            Do_SetNextStage "$Exec_all_stages"
-         fi 
-     fi
+            Upgrade_requested=1       # reset update-request to no
+      else
+         if [ !  "$LatestVersion" \> "$InstalledVersion"  ]  # is the installed version lower than the latest availalbe version (My Version)?
+            then
+            echo "No need to upgrade, you are already on the latest version ($LatestVersion)"
+            Upgrade_requested=0       # reset update-request to no
+         else         
+           echo "We will be upgrading this installation from v$InstalledVersion into v$LatestVersion"
+           Do_SetNextStage "$Exec_all_stages"
+         fi
+      fi
    fi
 
 
@@ -590,7 +591,7 @@ if [ $# -gt 0 ]; then
         ;;
       --meta-only)
         Upgrade_requested=1
-        UpgradeMetaOnly_requested=1
+        UpgradeMetaOnly_requested="1"
         shift
         ;; 
       --upgrade)
