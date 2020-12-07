@@ -214,7 +214,7 @@ function Do_Reset_Pacman()
 #2
    echo "Stage $Exec_reset_pacman: Restoring pacman to a workable state"
 
-   if [ "$Upgrade_requested" == 1  ] 
+   if [ "$Upgrade_requested" == "1"  ] 
       then 
        Do_SetNextStage $Exec_install_nvm
       return      #nothing to do
@@ -227,7 +227,7 @@ function Do_Reset_Pacman()
    else
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while (( $MyRetries -gt 0 ) && ($NoSuccessYet)); do
+      while  [  $NoSuccessYet ]  && [ "$MyRetries" -gt 0  ]; do
          sudo pacman -Sy --noconfirm
          if [ "$?" -ne 0 ]
              then
@@ -242,12 +242,12 @@ function Do_Reset_Pacman()
          else
           NoSuccessYet=0       # signal done, break the loop
          fi
-         $MyRetries=$MyRetries-1
+         ((MyRetries=MyRetries-1))
       done 
 
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while (( $MyRetries -gt 0 ) && ($NoSuccessYet)); do
+      while  [  $NoSuccessYet ]  && [ "$MyRetries" -gt 0  ]; do
          sudo pacman -S --force --noconfirm pacman
          if [ "$?" -ne 0 ]
              then
@@ -262,7 +262,7 @@ function Do_Reset_Pacman()
          else
           NoSuccessYet=0       # signal done, break the loop
          fi
-         $MyRetries=$MyRetries-1
+         ((MyRetries=MyRetries-1))
       done 
 
    fi   
@@ -362,7 +362,7 @@ function Do_Install_Git()
       then 
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while (( $MyRetries -gt 0 ) && ($NoSuccessYet)); do
+      while  [  $NoSuccessYet ]  && [ "$MyRetries" -gt 0  ]; do
          sudo pacman -S --overwrite  '/*' --noconfirm  git
          if [ "$?" -ne 0 ]
              then
@@ -377,7 +377,7 @@ function Do_Install_Git()
          else
           NoSuccessYet=0       # signal done, break the loop
          fi
-         $MyRetries=$MyRetries-1
+         ((MyRetries=MyRetries-1))
       done
    else
       echo "Git is already installed"   
@@ -438,7 +438,7 @@ function Do_Install_Mosquitto()
       sudo useradd -u 1002 mosquitto
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while (( $MyRetries -gt 0 ) && ($NoSuccessYet)); do
+      while  [  $NoSuccessYet ]  && [ "$MyRetries" -gt 0  ]; do
          sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
          if [ "$?" -ne 0 ]
              then
@@ -453,7 +453,7 @@ function Do_Install_Mosquitto()
          else
           NoSuccessYet=0       # signal done, break the loop
          fi
-         $MyRetries=$MyRetries-1
+         ((MyRetries=MyRetries-1))
       done
    fi 
     Do_SetNextStage $Exec_install_nodered 
@@ -491,7 +491,7 @@ function Do_Install_NodeRed()
 #     npm ERR! publish-please@5.5.2 preinstall: `node lib/pre-install.js`
 #     npm ERR! Exit status 1
  
-   if [[ ! -e /steady/neeo-custom/.node-red/node_modules/node-red/red.js]]
+   if [[ ! -e /steady/neeo-custom/.node-red/node_modules/node-red/red.js ]]
       then 
       pushd .
       mkdir /steady/neeo-custom/.node-red
@@ -527,7 +527,7 @@ function Do_Backup_solution()
       then 
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while (( $MyRetries -gt 0 ) && ($NoSuccessYet)); do
+      while  [  $NoSuccessYet ]  && [ "$MyRetries" -gt 0  ]; do
          sudo pacman -S --overwrite  '/*' --noconfirm  rsync
          if [ "$?" -ne 0 ]
              then
@@ -542,7 +542,7 @@ function Do_Backup_solution()
          else
           NoSuccessYet=0       # signal done, break the loop
          fi
-         $MyRetries=$MyRetries-1
+         ((MyRetries=MyRetries-1))
       done 
    fi 
    Do_SetNextStage $Exec_setup_pm2
@@ -562,7 +562,7 @@ function Do_Setup_PM2()
    fi 
    pushd .
    cd /steady/neeo-custom
-   if [[ !-e ".pm2" ]]
+   if [[ ! -e ".pm2" ]]
        then
       mkdir .pm2
    fi
