@@ -85,6 +85,7 @@ Options:
   --reset           Start installer from scratch)
   --meta-only       Only pull a new version of metadriver, and restart it
   --upgrade         Upgrade environment to add/improve functionality
+  --get-versions    Output current version of meta and the last available one
 EOL
 }
 
@@ -150,6 +151,23 @@ function Do_SetNextStage()
     echo "$FoundStage"
 }
 
+Do_Version_Check()
+{
+#Special_1
+   pushd .
+
+   cd /steady/neeo-custom/ 
+   if [[ ! -f  "steady/neeo-custom.meta"  ]]
+       then 
+       echo "Error: Metadriver is not yet installed"
+       return 
+   fi
+   cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
+   MyVersion=$(npm  list @jac459/metadriver  --no-fund|cut -d '@' -f 2)
+   echo "$MyVersion"
+
+
+}
 function Do_Mount_root()
 {
 #0
@@ -687,6 +705,10 @@ if [ $# -gt 0 ]; then
         Upgrade_requested=1
         shift
         ;;   
+     --get-versions)   
+        Determine_versions=1
+        shift
+        ;;
       -*|--*=) # unsupported flags
         echo "Error: Unsupported flag $1" >&2
         return
@@ -704,6 +726,18 @@ Do_ReadState                   # check to see if we ran before; if so, get the s
 echo $InstalledVersion
 
 echo "We are running in stage $FoundStage of 9"
+
+# Special functions go first. 
+
+# This one just determines the current version of meta and the latest available one
+if [ "$Determine_versions" == 1 ]
+   then
+      Do_Version_Check                              # Check if upgrade is possible/allowed
+      return
+   fi 
+
+
+# Do we need to run a special check first, before entering the state-machine?
 if [ "$Upgrade_requested" == 1 ]
    then
       Do_Upgrade                                    # Check if upgrade is possible/allowed
@@ -714,6 +748,10 @@ if [ "$Upgrade_requested" == 1 ]
       fi
    fi 
 
+
+
+# We come here if we want the stste machine to run. 
+# This may be for an entire run, a restarted run, or selected entries-only
 
 while (( "$GoOn"==1 )); do
 #    echo " case with $FoundStage"
