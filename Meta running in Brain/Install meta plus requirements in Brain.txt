@@ -23,8 +23,7 @@ login through ssh -i <key-ending with id_rsa> -l neeo
 
    1 sudo mount -o remount,rw /
    2 curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh' -k -o installmeta.sh
-   3 . installmeta (yes: dot blank) 
-   JACREMARK: here I had to type . installmeta.sh
+   3 . installmeta.sh (yes: dot blank) 
    In some cases, the script stops with a message telling you to execute a command and restart the installer.
    In this case:
    3) type the command . .bashrc and enter ; this sets up links to the nvm-package that the installer failed to do.
