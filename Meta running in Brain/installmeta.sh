@@ -459,9 +459,9 @@ function Do_Install_Mosquitto()
       Do_SetNextStage $Exec_install_nodered
       return      #nothing to do
    fi
-  MyMosquitto=$(command -v mosquitto)
-   if [[ "$MyMosquitto" == "" ]]
-      then 
+ # MyMosquitto=$(command -v mosquitto)
+ #  if [[ "$MyMosquitto" == "" ]]
+ #     then 
       sudo useradd -u 1002 mosquitto
 #      MyRetries=$RetryCountPacman
 #      NoSuccessYet=1
@@ -482,7 +482,7 @@ function Do_Install_Mosquitto()
  #        fi
  #        ((MyRetries=MyRetries-1))
  #     done
-   fi 
+ #  fi 
  
     Do_SetNextStage $Exec_install_nodered 
 }
