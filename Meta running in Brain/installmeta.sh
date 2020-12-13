@@ -237,53 +237,60 @@ function Do_Reset_Pacman()
        Do_SetNextStage $Exec_install_nvm
       return      #nothing to do
    fi
+   ln -s /etc/ca-certificates/extracted/ca-bundle.trust.crt /etc/ssl/certs/ca-certificates.crt
+   curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/safepackages.tgz' -o ~/safepackages.tgz 
+   pushd 
+   mkdir ~/safepackages
+   cd ~/safepackages
+   tar -xvf ~/safepackages.tgz
+   cd var/cache/pacman/pkg
+   sudo pacman -U * --overwrite '/*'
+#   MyPacmanVersion=$(pacman --version|grep 'Pacman v')
+#   if [[ "$MyPacmanVersion" == *"v5.2.2"* ]]
+#      then
+#      echo "Pacman is already up-to-date"
+#   else
+##      MyRetries=$RetryCountPacman
+ #     NoSuccessYet=1
+ #     while  [  $NoSuccessYet -ne 0 ] ; do
+ #        sudo pacman -Syu --noconfirm
+ #        if [ "$?" -ne 0 ]
+ #            then
+ #            if [[ $MyRetries -gt 1 ]]
+ #               then 
+ #               echo 'Error occured during pacman restore (pacman -Sy --noconfirm) - retrying'
+ #            else 
+ ##              echo 'Error occured during pacman restore (pacman -Sy --noconfirm); giving up'
+##             GoOn=0
+ #             return
+#             fi          
+#         else
+#          NoSuccessYet=0       # signal done, break the loop
+#         fi
+#         ((MyRetries=MyRetries-1))
+#      done 
 
-   MyPacmanVersion=$(pacman --version|grep 'Pacman v')
-   if [[ "$MyPacmanVersion" == *"v5.2.2"* ]]
-      then
-      echo "Pacman is already up-to-date"
-   else
-      MyRetries=$RetryCountPacman
-      NoSuccessYet=1
-      while  [  $NoSuccessYet -ne 0 ] ; do
-         sudo pacman -Sy --noconfirm
-         if [ "$?" -ne 0 ]
-             then
-             if [[ $MyRetries -gt 1 ]]
-                then 
-                echo 'Error occured during pacman restore (pacman -Sy --noconfirm) - retrying'
-             else 
-               echo 'Error occured during pacman restore (pacman -Sy --noconfirm); giving up'
-               GoOn=0
-               return
-             fi          
-         else
-          NoSuccessYet=0       # signal done, break the loop
-         fi
-         ((MyRetries=MyRetries-1))
-      done 
+ #     MyRetries=$RetryCountPacman
+ #     NoSuccessYet=1
+ #     while  [  $NoSuccessYet -ne 0 ] ; do
+ #        sudo pacman -S --force --noconfirm pacman
+ #        if [ "$?" -ne 0 ]
+ #            then
+ #            if [[ $MyRetries -gt 1 ]]
+ #               then 
+ #               echo 'Error occured during pacman restore (pacman -S --force --noconfirm pacman) - retrying'
+ #            else 
+ #              echo 'Error occured during pacman restore (pacman -S --force --noconfirm pacman); giving up'
+ #              GoOn=0
+ #              return
+ #            fi          
+ #        else
+ #         NoSuccessYet=0       # signal done, break the loop
+ #        fi
+ #        ((MyRetries=MyRetries-1))
+ #     done 
 
-      MyRetries=$RetryCountPacman
-      NoSuccessYet=1
-      while  [  $NoSuccessYet -ne 0 ] ; do
-         sudo pacman -S --force --noconfirm pacman
-         if [ "$?" -ne 0 ]
-             then
-             if [[ $MyRetries -gt 1 ]]
-                then 
-                echo 'Error occured during pacman restore (pacman -S --force --noconfirm pacman) - retrying'
-             else 
-               echo 'Error occured during pacman restore (pacman -S --force --noconfirm pacman); giving up'
-               GoOn=0
-               return
-             fi          
-         else
-          NoSuccessYet=0       # signal done, break the loop
-         fi
-         ((MyRetries=MyRetries-1))
-      done 
-
-   fi   
+#   fi   
    Do_SetNextStage $Exec_install_nvm
 
 
@@ -370,36 +377,36 @@ function Do_Install_Git()
 #5
    echo "Stage $Exec_install_git: installing GIT"
        
-   if [ "$Upgrade_requested" == 1 ]
-      then
-      Do_SetNextStage $Exec_install_meta
-      return      #nothing to do
-   fi
-  MyGit=$(command -v git)
-  if [[ "$MyGit" == "" ]]
-      then 
-      MyRetries=$RetryCountPacman
-      NoSuccessYet=1
-      while  [  $NoSuccessYet -eq 1 ] ; do
-         sudo pacman -S --overwrite  '/*' --noconfirm  git
-         if [ "$?" -ne 0 ]
-             then
-             if [[ $MyRetries -gt 1 ]]
-                then 
-                echo 'Error occured during Install of Git - retrying'
-             else 
-               echo ' Error occured during Install of Git - giving up'
-               GoOn=0
-               return
-             fi          
-         else
-          NoSuccessYet=0       # signal done, break the loop
-         fi
-         ((MyRetries=MyRetries-1))
-      done
-   else
-      echo "Git is already installed"   
-   fi
+#   if [ "$Upgrade_requested" == 1 ]
+#      then
+#      Do_SetNextStage $Exec_install_meta
+##      return      #nothing to do
+#   fi
+#  MyGit=$(command -v git)
+#  if [[ "$MyGit" == "" ]]
+##      then 
+#      MyRetries=$RetryCountPacman
+#      NoSuccessYet=1
+#      while  [  $NoSuccessYet -eq 1 ] ; do
+#         sudo pacman -S --overwrite  '/*' --noconfirm  git
+##         if [ "$?" -ne 0 ]
+ ##            then
+ #            if [[ $MyRetries -gt 1 ]]
+ #               then 
+ #               echo 'Error occured during Install of Git - retrying'
+ #            else 
+ #              echo ' Error occured during Install of Git - giving up'
+ #              GoOn=0
+ #              return
+ #            fi          
+ #        else
+ #         NoSuccessYet=0       # signal done, break the loop
+ ##        fi
+ #        ((MyRetries=MyRetries-1))
+ #     done
+ #  else
+ #     echo "Git is already installed"   
+ #  fi
     Do_SetNextStage $Exec_install_meta
 
 }
@@ -436,7 +443,8 @@ function Do_Install_Meta()
        then
        Do_SetNextStage $Exec_setup_pm2
    else
-       Do_SetNextStage $Exec_install_mosquitto
+#       Do_SetNextStage $Exec_install_mosquitto no need for install of pacman-packages, done witht tar
+       Do_SetNextStage $Exec_install_nodered
    fi
 }
 
@@ -593,6 +601,8 @@ function Do_Setup_PM2()
    fi 
    sudo PM2_HOME='/steady/neeo-custom/.pm2' pm2 startup
    sleep 5s
+
+
    . ~/.bashrc
    sudo chown neeo /steady/neeo-custom/.pm2/rpc.sock /steady/neeo-custom/.pm2/pub.sock
 
