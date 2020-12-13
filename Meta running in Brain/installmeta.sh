@@ -244,7 +244,7 @@ function Do_Reset_Pacman()
    cd ~/safepackages
    tar -xvf ~/safepackages.tgz
    cd var/cache/pacman/pkg
-   sudo pacman -U * --noconfirm --overwrite '/*'
+   sudo pacman -U * --noconfirm --force 
 #   MyPacmanVersion=$(pacman --version|grep 'Pacman v')
 #   if [[ "$MyPacmanVersion" == *"v5.2.2"* ]]
 #      then
