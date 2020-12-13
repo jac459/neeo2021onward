@@ -239,12 +239,12 @@ function Do_Reset_Pacman()
    fi
    ln -s /etc/ca-certificates/extracted/ca-bundle.trust.crt /etc/ssl/certs/ca-certificates.crt
    curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/safepackages.tgz' -o ~/safepackages.tgz 
-   pushd 
+   pushd . 
    mkdir ~/safepackages
    cd ~/safepackages
    tar -xvf ~/safepackages.tgz
    cd var/cache/pacman/pkg
-   sudo pacman -U * --overwrite '/*'
+   sudo pacman -U * --noconfirm --overwrite '/*'
 #   MyPacmanVersion=$(pacman --version|grep 'Pacman v')
 #   if [[ "$MyPacmanVersion" == *"v5.2.2"* ]]
 #      then
@@ -291,6 +291,7 @@ function Do_Reset_Pacman()
  #     done 
 
 #   fi   
+popd
    Do_SetNextStage $Exec_install_nvm
 
 
