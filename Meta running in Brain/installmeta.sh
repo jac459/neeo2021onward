@@ -536,7 +536,7 @@ function Do_Install_NodeRed()
       ln -s red.js node-red.js
       popd
    fi 
-   Do_SetNextStage $Exec_backup_solution
+   Do_SetNextStage $Exec_setup_pm2    #$Exec_backup_solution 
 }
 
 function Do_Backup_solution()
