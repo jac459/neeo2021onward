@@ -494,7 +494,7 @@ function Do_Install_NodeRed()
        
    if [ "$Upgrade_requested" == 1 ]
       then
-      Do_SetNextStage $Exec_backup_solution
+      Do_SetNextStage $Exec_setup_pm2   #$Exec_backup_solution
       return      #nothing to do
    fi
 
@@ -595,8 +595,8 @@ function Do_Setup_PM2()
       mkdir .pm2
    fi
 
-   MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/.pm2')   # add some usefull commands to .bashrc to make life easier
-   if [ "$?" -ne 0 ]
+   MyBashrc=$(cat ~/.bashrc |grep 'chmod 777 /steady/neeo-custom/.pm2/pub.sock')   # add some usefull commands to .bashrc to make life easier
+   if [ "$MyBashrc" == "" ]
        then
         echo 'sudo chmod 777 /steady/neeo-custom/.pm2/pub.sock' >> ~/.bashrc
         echo 'sudo chmod 777 /steady/neeo-custom/.pm2/rpc.sock'>> ~/.bashrc
