@@ -444,8 +444,8 @@ function Do_Install_Meta()
        then
        Do_SetNextStage $Exec_setup_pm2
    else
-#       Do_SetNextStage $Exec_install_mosquitto no need for install of pacman-packages, done witht tar
-       Do_SetNextStage $Exec_install_nodered
+       Do_SetNextStage $Exec_install_mosquitto
+        no need for install of pacman-packages, done witht tar
    fi
 }
 
@@ -463,26 +463,27 @@ function Do_Install_Mosquitto()
    if [[ "$MyMosquitto" == "" ]]
       then 
       sudo useradd -u 1002 mosquitto
-      MyRetries=$RetryCountPacman
-      NoSuccessYet=1
-      while  [  $NoSuccessYet -ne 0 ] ; do
-         sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
-         if [ "$?" -ne 0 ]
-             then
-             if [[ $MyRetries -gt 1 ]]
-                then 
-                echo 'Error occured during Install of Mosquitto - retrying'
-             else 
-               echo ' Error occured during Install of Mosquitto - giving up'
-               GoOn=0
-               return
-             fi          
-         else
-          NoSuccessYet=0       # signal done, break the loop
-         fi
-         ((MyRetries=MyRetries-1))
-      done
+#      MyRetries=$RetryCountPacman
+#      NoSuccessYet=1
+#      while  [  $NoSuccessYet -ne 0 ] ; do
+#         sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
+#         if [ "$?" -ne 0 ]
+#             then
+#             if [[ $MyRetries -gt 1 ]]
+#                then 
+##                echo 'Error occured during Install of Mosquitto - retrying'
+ #            else 
+ #              echo ' Error occured during Install of Mosquitto - giving up'
+ #              GoOn=0
+ #              return
+ #            fi          
+ #        else
+ #         NoSuccessYet=0       # signal done, break the loop
+ #        fi
+ #        ((MyRetries=MyRetries-1))
+ #     done
    fi 
+ 
     Do_SetNextStage $Exec_install_nodered 
 }
 
