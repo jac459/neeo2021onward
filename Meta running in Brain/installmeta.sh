@@ -155,19 +155,25 @@ function Do_SetNextStage()
 Do_Version_Check()
 {
 #Special_1
-   pushd .
 
-   cd /steady/neeo-custom/ 
-   if [[ ! -f  "steady/neeo-custom.meta"  ]]
+   if [[ ! -e  "/steady/neeo-custom/.meta"  ]]
        then 
        echo "Error: Metadriver is not yet installed"
        return 
    fi
+
+   pushd . 1>/dev/null
+
    cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
-   MyVersion=$(npm  list @jac459/metadriver  --no-fund|cut -d '@' -f 2)
-   echo "$MyVersion"
-
-
+   MyVersion=$(npm  list  --no-color  2>/dev/null 3>/dev/null | grep -i 'jac459/metadriver' |cut -d @  -f3 |cut -d ' ' -f1)
+   cd /steady/neeo-custom/.meta 
+   popd  1>/dev/null
+   MyPKG=$(curl https://raw.githubusercontent.com/jac459/neeo2021onward/main/packages.json -s)
+   LastVersion=$(echo $MyPKG | jq -c '[ .[] | select( .name | contains("jac459")) ]' |cut -d ':' -f 4|cut -d ',' -f 1 |cut -d '"' -f 2)
+   export InfoString="Last version: $LastVersion -  Installed version: $MyVersion"
+   echo $InfoString
+   
+   return
 }
 function Do_Mount_root()
 {
@@ -437,10 +443,8 @@ function Do_Install_Meta()
    pushd .
 
    cd /steady/neeo-custom/ 
-   if [[ ! -f  ".meta"  ]]
+   if [[ ! -e  ".meta"  ]]
        then 
-#      echo "/steady/neeo-custom/.meta already exist"
-#   else
       mkdir .meta
    fi
    cd .meta 
@@ -451,8 +455,10 @@ function Do_Install_Meta()
         GoOn=0
         popd 
         return
-    fi
+   fi
+
    popd 
+
    if [  "$UpgradeMetaOnly_requested" == "1" ]
        then
        Do_SetNextStage $Exec_setup_pm2
@@ -609,13 +615,13 @@ function Do_Setup_PM2()
    
    if [ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_X_Introduced" ]
       then
-      if [[  -e "/steady/neeo-custom.pm2" ]] #old PM2 has bug, it runs everything as root, so remove old PM2
-         then
-         sudo pm2 stop all
-         sudo pm2 kill
-         sudo systemctl stop pm2-neeo.service
-         sudo systemctl disable pm2-neeo.service      
-         sudo chown -R neeo:wheel /steady/neeo-custom
+     if [[  -e "/steady/neeo-custom.pm2" ]] #old PM2 has bug, it runs everything as root, so remove old PM2
+        then
+        sudo pm2 stop all
+        sudo pm2 kill
+        sudo systemctl stop pm2-neeo.service
+        sudo systemctl disable pm2-neeo.service      
+        sudo chown -R neeo:wheel /steady/neeo-custom
      fi
    fi
    
@@ -771,21 +777,20 @@ if [ $# -gt 0 ]; then
   done
 fi
 
-GoOn=1
-Do_ReadState                   # check to see if we ran before; if so, get the state of the previous runs and the version of installer thatran
-echo $InstalledVersion
-
-echo "We are running in stage $FoundStage of 9"
-
-# Special functions go first. 
-
+# Special functions go first.
+    
 # This one just determines the current version of meta and the latest available one
 if [ "$Determine_versions" == 1 ]
    then
       Do_Version_Check                              # Check if upgrade is possible/allowed
       return
-   fi 
+   fi
 
+GoOn=1
+Do_ReadState                   # check to see if we ran before; if so, get the state of the previous runs and the version of installer thatran
+echo $InstalledVersion
+
+echo "We are running in stage $FoundStage of 9"
 
 # Do we need to run a special check first, before entering the state-machine?
 if [ "$Upgrade_requested" == 1 ]
