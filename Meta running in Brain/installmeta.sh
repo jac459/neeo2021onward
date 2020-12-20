@@ -631,7 +631,7 @@ function Do_Setup_PM2()
 #       then
 #        echo 'sudo chmod 777 /steady/neeo-custom/.pm2neeo/pub.sock' >> ~/.bashrc
 #        echo 'sudo chmod 777 /steady/neeo-custom/.pm2neeo/rpc.sock'>> ~/.bashrc
-3   fi 
+#   fi 
    pm2 startup
    sleep 5s
    sudo   /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
