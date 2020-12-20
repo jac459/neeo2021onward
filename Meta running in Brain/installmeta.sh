@@ -42,6 +42,7 @@ Function_7_Introduced=1.0
 Function_8_Introduced=1.0
 Function_9_Introduced=1.0
 Function_A_Introduced=1.1
+Function_B_Introduced=1.3 
 Function_X_Introduced=1.2
 
 # Following are the various stages that can be executed
@@ -55,6 +56,7 @@ Exec_install_meta=6
 Exec_install_mosquitto=7
 Exec_install_nodered=8
 Exec_backup_solution=9 
+Exec_install_jq=A
 Exec_setup_pm2=X 
 Exec_all_stages=0
 Exec_finish=Y 
@@ -562,12 +564,12 @@ function Do_Install_NodeRed()
 
 function Do_Backup_solution()
 {
-#A
+#9
    echo "Stage $Exec_backup_solution: Setting up backup"
 
-   if [ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_A_Introduced" ]
+   if [ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_9_Introduced" ]
       then
-      Do_SetNextStage $Exec_setup_pm2
+      Do_SetNextStage $Exec_install_jq
       return      #nothing to do
    fi
 
@@ -594,6 +596,46 @@ function Do_Backup_solution()
          ((MyRetries=MyRetries-1))
       done 
    fi 
+   Do_SetNextStage Exec_install_jq
+
+}
+
+function Do_install_jq()
+{
+#A
+   echo "Stage $Exec_install_jq : add jq package"
+
+
+   if [ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_A_Introduced" ]
+      then
+      Do_SetNextStage $Exec_setup_pm2
+      return      #nothing to do
+   fi
+     
+  MyRSync=$(command -v rsync)
+   if [[ "$MyRSync" == "" ]]
+      then
+      MyRetries=$RetryCountPacman
+      NoSuccessYet=1
+      while  [  $NoSuccessYet -ne 0 ] ; do
+         sudo pacman -S --overwrite  '/*' --noconfirm  jq
+         if [ "$?" -ne 0 ]
+             then
+             if [[ $MyRetries -gt 1 ]]
+                then
+                echo 'Error occured during Install of rsync - retrying'
+             else
+               echo ' Error occured during Install of rsync - giving up'
+               GoOn=0
+               return
+             fi
+         else
+          NoSuccessYet=0       # signal done, break the loop
+         fi 
+         ((MyRetries=MyRetries-1))
+      done
+   fi
+
    Do_SetNextStage $Exec_setup_pm2
 
 }
@@ -732,7 +774,7 @@ echo "We are done installng, your installation is now at level v$LatestVersion"
 
 # first setup a cntrol-C handler
 trap no_ctrlc SIGINT
-
+Determine_versions=0
 if [ $# -gt 0 ]; then
   # Parsing any parameters passed to us
   while (( "$#" )); do
@@ -777,10 +819,12 @@ if [ $# -gt 0 ]; then
   done
 fi
 
+
+echo "version)check=$Determine_versions"
 # Special functions go first.
     
 # This one just determines the current version of meta and the latest available one
-if [ "$Determine_versions" == 1 ]
+if [ "$Determine_versions" == "1" ]
    then
       Do_Version_Check                              # Check if upgrade is possible/allowed
       return
@@ -793,10 +837,10 @@ echo $InstalledVersion
 echo "We are running in stage $FoundStage of 9"
 
 # Do we need to run a special check first, before entering the state-machine?
-if [ "$Upgrade_requested" == 1 ]
+if [ "$Upgrade_requested" == "1" ]
    then
       Do_Upgrade                                    # Check if upgrade is possible/allowed
-      if [ "$Upgrade_requested" != 1 ]              # Did Do_Upgrade function made a decision overriding update-request?
+      if [ "$Upgrade_requested" != "1" ]              # Did Do_Upgrade function made a decision overriding update-request?
          then
          echo "Upgrade was rejected"
          return
