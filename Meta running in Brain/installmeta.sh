@@ -23,7 +23,7 @@ Statedir="/steady/.installer"
 Statefile="$Statedir/state"
 FoundStage=0
 VersionFile="$Statedir/version"
-LatestVersion=1.1
+LatestVersion=1.3
 InstalledVersion=1.0  # assume that the first installer ran before.
 Upgrade_requested=0
 UpgradeMetaOnly_requested="0"
@@ -42,6 +42,7 @@ Function_7_Introduced=1.0
 Function_8_Introduced=1.0
 Function_9_Introduced=1.0
 Function_A_Introduced=1.1
+Function_X_Introduced=1.2
 
 # Following are the various stages that can be executed
 Exec_mount_root_stage=0
@@ -225,6 +226,16 @@ function Do_Setup_steady_directory_struct()
    sudo chmod -R 775 /steady/neeo-custom
    Do_SetNextStage $Exec_reset_pacman
 
+   sudo echo "append_path () {
+       case \":$PATH:\" in
+           *:\"$\1\":*)
+               ;;
+           *)
+               PATH=\"${PATH:+$PATH:}$1\"
+       esac
+   }" > /etc/profile.d/perlbin.sh.new
+   sudo cp /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh.org
+   sudo mv /etc/profile.d/perlbin.sh.new /etc/profile.d/perlbin.sh
 }
 
 function Do_Reset_Pacman()
@@ -243,6 +254,7 @@ function Do_Reset_Pacman()
    mkdir ~/safepackages
    cd ~/safepackages
    tar -xvf ~/safepackages.tgz
+   rm ~/safepackages.tgz
    cd var/cache/pacman/pkg
    sudo pacman -U * --noconfirm --force 
 #   MyPacmanVersion=$(pacman --version|grep 'Pacman v')
@@ -333,11 +345,12 @@ function Do_Install_NVM()
         GoOn=0
         return
     fi
-    MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/.pm2')   # add some usefull commands to .bashrc to make life easier
+    MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/.pm2neeo.pm2')   # add some usefull commands to .bashrc to make life easier
     if [ "$?" -ne 0 ]
        then
         echo 'export PM2_HOME=/steady/neeo-custom/.pm2' >> ~/.bashrc
     fi
+    . ~/.bashrc
     Do_SetNextStage $Exec_finish_nvm
 
 }
@@ -494,7 +507,7 @@ function Do_Install_NodeRed()
        
    if [ "$Upgrade_requested" == 1 ]
       then
-      Do_SetNextStage $Exec_setup_pm2   #$Exec_backup_solution
+      Do_SetNextStage $Exec_backup_solution
       return      #nothing to do
    fi
 
@@ -536,7 +549,9 @@ function Do_Install_NodeRed()
       ln -s red.js node-red.js
       popd
    fi 
-   Do_SetNextStage $Exec_setup_pm2    #$Exec_backup_solution 
+#   Do_SetNextStage $Exec_setup_pm2     
+   Do_SetNextStage $Exec_backup_solution 
+
 }
 
 function Do_Backup_solution()
@@ -580,40 +595,55 @@ function Do_Backup_solution()
 function Do_Setup_PM2()
 {
 #X
+#sudo   /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /home/neeo
+#sudo systemctl stop neeo-pm2.service
+#sudo systemctl disable neeo-pm2.service
    echo "Stage $Exec_setup_pm2: Activating services in PM2"
        
    if [  "$UpgradeMetaOnly_requested" == "1" ]
       then 
-         PM2_HOME='/steady/neeo-custom/.pm2' pm2 restart meta
+         pm2 restart meta
          Do_SetNextStage $Exec_finish
          return
    fi 
+   
+   if [ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_X_Introduced" ]
+      then
+     if [[  -e "/steady/neeo-custom.pm2" ]] #old PM2 has bug, it runs everything as root, so remove old PM2
+        then
+        sudo pm2 stop all
+        sudo pm2 kill
+        sudo systemctl stop pm2-neeo.service
+        sudo systemctl disable pm2-neeo.service      
+        sudo chown -R neeo:wheel /steady/neeo-custom
+   fi
+   
+
    pushd .
    cd /steady/neeo-custom
-   if [[ ! -e ".pm2" ]]
+   if [[ ! -e ".pm2neeo" ]]
        then
-      mkdir .pm2
+      mkdir .pm2neeo
    fi
 
-   MyBashrc=$(cat ~/.bashrc |grep 'chmod 777 /steady/neeo-custom/.pm2/pub.sock')   # add some usefull commands to .bashrc to make life easier
-   if [ "$MyBashrc" == "" ]
-       then
-        echo 'sudo chmod 777 /steady/neeo-custom/.pm2/pub.sock' >> ~/.bashrc
-        echo 'sudo chmod 777 /steady/neeo-custom/.pm2/rpc.sock'>> ~/.bashrc
-   fi 
-   sudo PM2_HOME='/steady/neeo-custom/.pm2' pm2 startup
+#   MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/.pm2neeo')   # add some usefull commands to .bashrc to make life easier
+#   if [ "$?" -ne 0 ]
+#       then
+#        echo 'sudo chmod 777 /steady/neeo-custom/.pm2neeo/pub.sock' >> ~/.bashrc
+#        echo 'sudo chmod 777 /steady/neeo-custom/.pm2neeo/rpc.sock'>> ~/.bashrc
+3   fi 
+   pm2 startup
    sleep 5s
-
-
+   sudo   /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
    . ~/.bashrc
-   sudo chown neeo /steady/neeo-custom/.pm2/rpc.sock /steady/neeo-custom/.pm2/pub.sock
+#   sudo chown neeo /steady/neeo-custom/.pm2neeo/rpc.sock /steady/neeo-custom/.pm2neeo/pub.sock
 
-   MyPM2=$(PM2_HOME='/steady/neeo-custom/.pm2' pm2 list)
+   MyPM2=$(pm2 list)
    if [[ $(echo "$MyPM2" | grep -i 'mosquitto') == "" ]]
        then
-       PM2_HOME='/steady/neeo-custom/.pm2' pm2 start mosquitto
+       pm2 start mosquitto
    else
-       PM2_HOME='/steady/neeo-custom/.pm2' pm2 restart mosquitto
+       pm2 restart mosquitto
    fi   
    if [[ "$?" != 0 ]]
       then 
@@ -623,9 +653,9 @@ function Do_Setup_PM2()
    if [[ $(echo "$MyPM2" | grep -i 'node-red') == "" ]];
       then 
       cd /steady/neeo-custom/.node-red/node_modules/node-red
-      PM2_HOME='/steady/neeo-custom/.pm2' pm2 start node-red.js -f  --node-args='--max-old-space-size=128'
+      pm2 start node-red.js -f  --node-args='--max-old-space-size=128'
    else 
-      PM2_HOME='/steady/neeo-custom/.pm2' pm2 restart node-red
+      pm2 restart node-red
    fi
    if [[ "$?" != 0 ]]
       then 
@@ -636,9 +666,9 @@ function Do_Setup_PM2()
    if [[ $(echo "$MyPM2" | grep -i 'meta') == "" ]];
       then    
       cd /steady/neeo-custom/.meta/node_modules/\@jac459/metadriver
-      PM2_HOME='/steady/neeo-custom/.pm2' pm2 start meta.js
+      pm2 start meta.js
    else 
-      PM2_HOME='/steady/neeo-custom/.pm2' pm2 restart meta
+      pm2 restart meta
    fi 
    if [[ "$?" != 0 ]]
       then 
@@ -647,7 +677,7 @@ function Do_Setup_PM2()
 
    popd
 
-   sudo PM2_HOME='/steady/neeo-custom/.pm2' pm2 save
+   pm2 save
    Do_SetNextStage $Exec_finish
 }
 
@@ -722,7 +752,14 @@ if [ $# -gt 0 ]; then
         shift
         ;;
       -*|--*=) # unsupported flags
+        echo ""
+        echo "" 
+        echo ""
         echo "Error: Unsupported flag $1" >&2
+        echo ""
+        echo ""
+        echo ""
+        usage
         return
         ;;
       *)
