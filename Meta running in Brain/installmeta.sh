@@ -609,13 +609,14 @@ function Do_Setup_PM2()
    
    if [ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_X_Introduced" ]
       then
-     if [[  -e "/steady/neeo-custom.pm2" ]] #old PM2 has bug, it runs everything as root, so remove old PM2
-        then
-        sudo pm2 stop all
-        sudo pm2 kill
-        sudo systemctl stop pm2-neeo.service
-        sudo systemctl disable pm2-neeo.service      
-        sudo chown -R neeo:wheel /steady/neeo-custom
+      if [[  -e "/steady/neeo-custom.pm2" ]] #old PM2 has bug, it runs everything as root, so remove old PM2
+         then
+         sudo pm2 stop all
+         sudo pm2 kill
+         sudo systemctl stop pm2-neeo.service
+         sudo systemctl disable pm2-neeo.service      
+         sudo chown -R neeo:wheel /steady/neeo-custom
+     fi
    fi
    
 
