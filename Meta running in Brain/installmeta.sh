@@ -167,11 +167,12 @@ Do_Version_Check()
    pushd . 1>/dev/null
 
    cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
-   MyVersion=$(npm  list  --no-color  2>/dev/null 3>/dev/null | grep -i 'jac459/metadriver' |cut -d @  -f3 |cut -d ' ' -f1)
-   cd /steady/neeo-custom/.meta 
+   MyVersion=$(cat package.json | jq ._id|xargs | cut -d @ -f3) 
    popd  1>/dev/null
-   MyPKG=$(curl https://raw.githubusercontent.com/jac459/neeo2021onward/main/packages.json -s)
-   LastVersion=$(echo $MyPKG | jq -c '[ .[] | select( .name | contains("jac459")) ]' |cut -d ':' -f 4|cut -d ',' -f 1 |cut -d '"' -f 2)
+
+   MyPKG=$(curl https://raw.githubusercontent.com/jac459/metadriver/master/package.json -s)
+   LastVersion=$(echo $MyPKG | jq ._id|xargs | cut -d @ -f3)
+
    export InfoString="Last version: $LastVersion -  Installed version: $MyVersion"
    echo $InfoString
    
@@ -820,7 +821,6 @@ if [ $# -gt 0 ]; then
 fi
 
 
-echo "version)check=$Determine_versions"
 # Special functions go first.
     
 # This one just determines the current version of meta and the latest available one
