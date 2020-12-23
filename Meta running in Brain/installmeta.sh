@@ -265,7 +265,12 @@ function Do_Reset_Pacman()
    tar -xvf ~/safepackages.tgz
    rm ~/safepackages.tgz
    cd var/cache/pacman/pkg
+
+   sudo pacman -Sy      
    sudo pacman -U * --noconfirm --force 
+   # this update will change /etc/passwd, removing the userid for the time sync-daemon
+   # let's add it again.  
+   sudo useradd systemd-timesync -m -d /home/systemd-timesync
 #   MyPacmanVersion=$(pacman --version|grep 'Pacman v')
 #   if [[ "$MyPacmanVersion" == *"v5.2.2"* ]]
 #      then
@@ -484,7 +489,7 @@ function Do_Install_Mosquitto()
  # MyMosquitto=$(command -v mosquitto)
  #  if [[ "$MyMosquitto" == "" ]]
  #     then 
-      sudo useradd -u 1002 mosquitto
+      sudo useradd -u 1002 mosquitto -m -d /home/mosquitto
 #      MyRetries=$RetryCountPacman
 #      NoSuccessYet=1
 #      while  [  $NoSuccessYet -ne 0 ] ; do
