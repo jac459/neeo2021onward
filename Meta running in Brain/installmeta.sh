@@ -168,7 +168,7 @@ Do_Version_Check()
 
    cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
    MyVersion=$(cat package.json | jq ._id|xargs | cut -d @ -f3) 
-   popd  1>/dev/null
+   popd  >/dev/null
 
    MyPKG=$(curl https://raw.githubusercontent.com/jac459/metadriver/master/package.json -s)
    LastVersion=$(echo $MyPKG | jq ._id|xargs | cut -d @ -f3)
@@ -257,67 +257,18 @@ function Do_Reset_Pacman()
        Do_SetNextStage $Exec_install_nvm
       return      #nothing to do
    fi
-   ln -s /etc/ca-certificates/extracted/ca-bundle.trust.crt /etc/ssl/certs/ca-certificates.crt
+   sudo ln -s /etc/ca-certificates/extracted/ca-bundle.trust.crt /etc/ssl/certs/ca-certificates.crt
    curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/safepackages.tgz' -o ~/safepackages.tgz 
-   pushd . 
+   pushd . >/dev/null
    mkdir ~/safepackages
    cd ~/safepackages
    tar -xvf ~/safepackages.tgz
    rm ~/safepackages.tgz
    cd var/cache/pacman/pkg
-
-   sudo pacman -Sy      
+   sudo pacman -Sy
    sudo pacman -U * --noconfirm --force 
-   # this update will change /etc/passwd, removing the userid for the time sync-daemon
-   # let's add it again.  
-   sudo useradd systemd-timesync -m -d /home/systemd-timesync
-#   MyPacmanVersion=$(pacman --version|grep 'Pacman v')
-#   if [[ "$MyPacmanVersion" == *"v5.2.2"* ]]
-#      then
-#      echo "Pacman is already up-to-date"
-#   else
-##      MyRetries=$RetryCountPacman
- #     NoSuccessYet=1
- #     while  [  $NoSuccessYet -ne 0 ] ; do
- #        sudo pacman -Syu --noconfirm
- #        if [ "$?" -ne 0 ]
- #            then
- #            if [[ $MyRetries -gt 1 ]]
- #               then 
- #               echo 'Error occured during pacman restore (pacman -Sy --noconfirm) - retrying'
- #            else 
- ##              echo 'Error occured during pacman restore (pacman -Sy --noconfirm); giving up'
-##             GoOn=0
- #             return
-#             fi          
-#         else
-#          NoSuccessYet=0       # signal done, break the loop
-#         fi
-#         ((MyRetries=MyRetries-1))
-#      done 
 
- #     MyRetries=$RetryCountPacman
- #     NoSuccessYet=1
- #     while  [  $NoSuccessYet -ne 0 ] ; do
- #        sudo pacman -S --force --noconfirm pacman
- #        if [ "$?" -ne 0 ]
- #            then
- #            if [[ $MyRetries -gt 1 ]]
- #               then 
- #               echo 'Error occured during pacman restore (pacman -S --force --noconfirm pacman) - retrying'
- #            else 
- #              echo 'Error occured during pacman restore (pacman -S --force --noconfirm pacman); giving up'
- #              GoOn=0
- #              return
- #            fi          
- #        else
- #         NoSuccessYet=0       # signal done, break the loop
- #        fi
- #        ((MyRetries=MyRetries-1))
- #     done 
-
-#   fi   
-popd
+   popd  >/dev/null
    Do_SetNextStage $Exec_install_nvm
 
 
@@ -384,18 +335,18 @@ function Do_Finish_NVM()
       then
       echo "NPM 6.14.9 was already installed, skipping" 
    else
-      pushd . 
+      pushd .  >/dev/null 
       cd /steady/neeo-custom/
       npm install npm -g  --no-fund
       if [ "$?" -ne 0 ]
          then
           echo 'Error installing npm (npm install npm -g)'
           GoOn=0
-          popd 
+          popd  >/dev/null 
           return
       fi 
    fi
-       popd 
+       popd >/dev/null 
     Do_SetNextStage $Exec_install_git
 
 }
@@ -448,7 +399,7 @@ function Do_Install_Meta()
    #   then
    #   return                                                           # in tis case, upgrade will be requiresd
    #fi
-   pushd .
+   pushd . >/dev/null 
 
    cd /steady/neeo-custom/ 
    if [[ ! -e  ".meta"  ]]
@@ -461,11 +412,11 @@ function Do_Install_Meta()
        then
         echo 'Install of metadriver failed'
         GoOn=0
-        popd 
+        popd >/dev/null 
         return
    fi
 
-   popd 
+   popd >/dev/null 
 
    if [  "$UpgradeMetaOnly_requested" == "1" ]
        then
@@ -489,7 +440,7 @@ function Do_Install_Mosquitto()
  # MyMosquitto=$(command -v mosquitto)
  #  if [[ "$MyMosquitto" == "" ]]
  #     then 
-      sudo useradd -u 1002 mosquitto -m -d /home/mosquitto
+      sudo useradd -u 1002 mosquitto
 #      MyRetries=$RetryCountPacman
 #      NoSuccessYet=1
 #      while  [  $NoSuccessYet -ne 0 ] ; do
@@ -518,6 +469,14 @@ function Do_Install_NodeRed()
 {   
 #8
    echo "Stage $Exec_install_nodered: installing Node-Red"
+
+   echo ""
+   echo ""
+   echo "This tsk will run and multiple ways to install are attempted"
+   echo "    Therefore you WILL see errors, IGNORE ˜THEM!"
+   echo "     Check last statements, should be:"
+   echo "        + node-red@1.2.6"
+   echo "        added 316 packages from 284 contributors"
        
    if [ "$Upgrade_requested" == 1 ]
       then
@@ -548,7 +507,7 @@ function Do_Install_NodeRed()
  
    if [[ ! -e /steady/neeo-custom/.node-red/node_modules/node-red/red.js ]]
       then 
-      pushd .
+      pushd . >/dev/null
       mkdir /steady/neeo-custom/.node-red
       cd /steady/neeo-custom/.node-red
       npm install --unsafe-perm node-red  --no-fund
@@ -556,12 +515,12 @@ function Do_Install_NodeRed()
           then
          echo 'Install of NodeRed failed'
          GoOn=0
-         popd
+         popd >/dev/null
          return
       fi
       cd /steady/neeo-custom/.node-red/node_modules/node-red
       ln -s red.js node-red.js
-      popd
+      popd >/dev/null
    fi 
 #   Do_SetNextStage $Exec_setup_pm2     
    Do_SetNextStage $Exec_backup_solution 
@@ -674,7 +633,7 @@ function Do_Setup_PM2()
    fi
    
 
-   pushd .
+   pushd . >/dev/null
    cd /steady/neeo-custom
    if [[ ! -e ".pm2neeo" ]]
        then
@@ -730,7 +689,7 @@ function Do_Setup_PM2()
       echo "Error adding meta-start to PM2"
    fi
 
-   popd
+   popd >/dev/null
 
    pm2 save
    Do_SetNextStage $Exec_finish
