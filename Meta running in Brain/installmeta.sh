@@ -1,4 +1,4 @@
-#!/bin/bash
+y#!/bin/bash
 #
 # Meta Installer for NEEO-Brain
 #
@@ -41,7 +41,7 @@ Function_6_Introduced=1.0
 Function_7_Introduced=1.0
 Function_8_Introduced=1.0
 Function_9_Introduced=1.0
-Function_A_Introduced=1.1
+Function_A_Introduced=1.3
 Function_B_Introduced=1.3 
 Function_X_Introduced=1.2
 
@@ -435,7 +435,7 @@ function Do_Install_Mosquitto()
 #7
    echo "Stage $Exec_install_mosquitto: installing Mosquitto"
        
-   if [ "$Upgrade_requested" == 1 ]
+   if [[ "$Upgrade_requested" == 1 ]]
       then
       Do_SetNextStage $Exec_install_nodered
       return      #nothing to do
@@ -443,7 +443,7 @@ function Do_Install_Mosquitto()
  # MyMosquitto=$(command -v mosquitto)
  #  if [[ "$MyMosquitto" == "" ]]
  #     then 
-      sudo useradd -u 1002 mosquitto
+      sudo useradd -u 1002 mosquitto -m -d /home/mosquitto
 #      MyRetries=$RetryCountPacman
 #      NoSuccessYet=1
 #      while  [  $NoSuccessYet -ne 0 ] ; do
@@ -578,20 +578,23 @@ function Do_install_jq()
       Do_SetNextStage $Exec_setup_pm2
       return      #nothing to do
    fi
-   MyRSync=$(command -v rsync)
+
+   MyRSync=$(command -v jq)
    if [[ "$MyRSync" == "" ]]
       then
+echo "need to install jq"
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
       while  [  $NoSuccessYet -ne 0 ] ; do
+echo "jq-1"
          sudo pacman -S --overwrite  '/*' --noconfirm  jq
          if [ "$?" -ne 0 ]
              then
              if [[ $MyRetries -gt 1 ]]
                 then
-                echo 'Error occured during Install of rsync - retrying'
+                echo 'Error occured during Install of jq - retrying'
              else
-               echo ' Error occured during Install of rsync - giving up'
+               echo ' Error occured during Install of jq	 - giving up'
                GoOn=0
                return
              fi
