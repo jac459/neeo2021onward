@@ -267,6 +267,9 @@ function Do_Reset_Pacman()
    cd var/cache/pacman/pkg
    sudo pacman -Sy
    sudo pacman -U * --noconfirm --force 
+   # this update will change /etc/passwd, removing the userid for the time sync-daemon
+   # let's add it again.  
+   sudo useradd systemd-timesync -m -d /home/systemd-timesync
 
    popd  >/dev/null
    Do_SetNextStage $Exec_install_nvm
@@ -310,10 +313,10 @@ function Do_Install_NVM()
         GoOn=0
         return
     fi
-    MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/.pm2neeo.pm2')   # add some usefull commands to .bashrc to make life easier
+    MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2')   # add some usefull commands to .bashrc to make life easier
     if [ "$?" -ne 0 ]
        then
-        echo 'export PM2_HOME=/steady/neeo-custom/.pm2' >> ~/.bashrc
+        echo 'export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2' >> ~/.bashrc
     fi
     . ~/.bashrc
     Do_SetNextStage $Exec_finish_nvm
@@ -532,10 +535,9 @@ function Do_Backup_solution()
 #9
    echo "Stage $Exec_backup_solution: Setting up backup"
 
-   if [ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_9_Introduced" ]
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_9_Introduced" ]]
       then
       Do_SetNextStage $Exec_install_jq
-      return      #nothing to do
    fi
 
   MyRSync=$(command -v rsync)
@@ -561,7 +563,7 @@ function Do_Backup_solution()
          ((MyRetries=MyRetries-1))
       done 
    fi 
-   Do_SetNextStage Exec_install_jq
+   Do_SetNextStage $Exec_install_jq
 
 }
 
@@ -571,13 +573,12 @@ function Do_install_jq()
    echo "Stage $Exec_install_jq : add jq package"
 
 
-   if [ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_A_Introduced" ]
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_A_Introduced" ]]
       then
       Do_SetNextStage $Exec_setup_pm2
       return      #nothing to do
    fi
-     
-  MyRSync=$(command -v rsync)
+   MyRSync=$(command -v rsync)
    if [[ "$MyRSync" == "" ]]
       then
       MyRetries=$RetryCountPacman
@@ -613,14 +614,14 @@ function Do_Setup_PM2()
 #sudo systemctl disable neeo-pm2.service
    echo "Stage $Exec_setup_pm2: Activating services in PM2"
        
-   if [  "$UpgradeMetaOnly_requested" == "1" ]
+   if [[  "$UpgradeMetaOnly_requested" == "1" ]]
       then 
          pm2 restart meta
          Do_SetNextStage $Exec_finish
          return
    fi 
    
-   if [ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_X_Introduced" ]
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_X_Introduced" ]]
       then
      if [[  -e "/steady/neeo-custom.pm2" ]] #old PM2 has bug, it runs everything as root, so remove old PM2
         then
@@ -648,7 +649,8 @@ function Do_Setup_PM2()
 #   fi 
    pm2 startup
    sleep 5s
-   sudo   /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
+   sudo PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
+   # sudo   /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
    . ~/.bashrc
 #   sudo chown neeo /steady/neeo-custom/.pm2neeo/rpc.sock /steady/neeo-custom/.pm2neeo/pub.sock
 
@@ -846,6 +848,12 @@ while (( "$GoOn"==1 )); do
        $Exec_install_nodered)
           Do_Install_NodeRed
        ;;
+       $Exec_backup_solution)
+          Do_Backup_solution
+       ;;
+       $Exec_install_jq)
+          Do_install_jq
+       ;;
        $Exec_setup_pm2)
           Do_Setup_PM2
        ;;
@@ -867,5 +875,3 @@ while (( "$GoOn"==1 )); do
 
 echo ""  
 done
-
-
