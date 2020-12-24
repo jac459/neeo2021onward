@@ -235,16 +235,6 @@ function Do_Setup_steady_directory_struct()
    sudo chmod -R 775 /steady/neeo-custom
    Do_SetNextStage $Exec_reset_pacman
 
-   sudo echo "append_path () {
-       case \":$PATH:\" in
-           *:\"$\1\":*)
-               ;;
-           *)
-               PATH=\"${PATH:+$PATH:}$1\"
-       esac
-   }" > /etc/profile.d/perlbin.sh.new
-   sudo cp /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh.org
-   sudo mv /etc/profile.d/perlbin.sh.new /etc/profile.d/perlbin.sh
 }
 
 function Do_Reset_Pacman()
@@ -270,7 +260,17 @@ function Do_Reset_Pacman()
    # this update will change /etc/passwd, removing the userid for the time sync-daemon
    # let's add it again.  
    sudo useradd systemd-timesync -m -d /home/systemd-timesync
-
+   # and remove some annoying error-messages on login because of a missing dunction in perl
+   sudo echo "append_path () {
+       case \":$PATH:\" in
+           *:\"$\1\":*)
+               ;;
+           *)
+               PATH=\"${PATH:+$PATH:}$1\"
+       esac
+   }" > /etc/profile.d/perlbin.sh.new
+   sudo cp /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh.org
+   sudo mv /etc/profile.d/perlbin.sh.new /etc/profile.d/perlbin.sh
    popd  >/dev/null
    Do_SetNextStage $Exec_install_nvm
 
@@ -652,7 +652,8 @@ function Do_Setup_PM2()
 #   fi 
    pm2 startup
    sleep 5s
-   sudo PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
+   sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
+   #sudo PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
    # sudo   /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
    . ~/.bashrc
 #   sudo chown neeo /steady/neeo-custom/.pm2neeo/rpc.sock /steady/neeo-custom/.pm2neeo/pub.sock
