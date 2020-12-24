@@ -261,17 +261,23 @@ function Do_Reset_Pacman()
    # let's add it again.  
    sudo useradd systemd-timesync -m -d /home/systemd-timesync
    # and remove some annoying error-messages on login because of a missing dunction in perl
-   sudo echo "append_path () {
+   echo "append_path () {
        case \":$PATH:\" in
            *:\"$\1\":*)
                ;;
            *)
                PATH=\"${PATH:+$PATH:}$1\"
        esac
-   }" > /etc/profile.d/perlbin.sh.new
+   }" > ~/perlbins1.sh
    sudo cp /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh.org
-   sudo mv /etc/profile.d/perlbin.sh.new /etc/profile.d/perlbin.sh
-   popd  >/dev/null
+   if [ "$?" -ne 0 ]
+      then
+      echo "Error in saving old perlbin-profile, not updating"
+   else
+      sudo cat ~/perlbins1.sh /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh
+      rm ~/perlbins1.sh
+   fi
+   popd  >/dev/null  
    Do_SetNextStage $Exec_install_nvm
 
 
@@ -359,36 +365,36 @@ function Do_Install_Git()
 #5
    echo "Stage $Exec_install_git: installing GIT"
        
-#   if [ "$Upgrade_requested" == 1 ]
-#      then
-#      Do_SetNextStage $Exec_install_meta
-##      return      #nothing to do
-#   fi
-#  MyGit=$(command -v git)
-#  if [[ "$MyGit" == "" ]]
-##      then 
-#      MyRetries=$RetryCountPacman
-#      NoSuccessYet=1
-#      while  [  $NoSuccessYet -eq 1 ] ; do
-#         sudo pacman -S --overwrite  '/*' --noconfirm  git
-##         if [ "$?" -ne 0 ]
- ##            then
- #            if [[ $MyRetries -gt 1 ]]
- #               then 
- #               echo 'Error occured during Install of Git - retrying'
- #            else 
- #              echo ' Error occured during Install of Git - giving up'
- #              GoOn=0
- #              return
- #            fi          
- #        else
- #         NoSuccessYet=0       # signal done, break the loop
- ##        fi
- #        ((MyRetries=MyRetries-1))
- #     done
- #  else
- #     echo "Git is already installed"   
- #  fi
+   if [ "$Upgrade_requested" == 1 ]
+      then
+      Do_SetNextStage $Exec_install_meta
+      return      #nothing to do
+   fi
+  MyGit=$(command -v git)
+  if [[ "$MyGit" == "" ]]
+      then 
+      MyRetries=$RetryCountPacman
+      NoSuccessYet=1
+      while  [  $NoSuccessYet -eq 1 ] ; do
+         sudo pacman -S --overwrite  '/*' --noconfirm  git
+         if [ "$?" -ne 0 ]
+             then
+             if [[ $MyRetries -gt 1 ]]
+                then 
+                echo 'Error occured during Install of Git - retrying'
+             else 
+               echo ' Error occured during Install of Git - giving up'
+               GoOn=0
+               return
+             fi          
+         else
+           NoSuccessYet=0       # signal done, break the loop
+         fi
+         ((MyRetries=MyRetries-1))
+      done
+   else
+      echo "Git is already installed"   
+   fi
     Do_SetNextStage $Exec_install_meta
 
 }
@@ -435,7 +441,7 @@ function Do_Install_Mosquitto()
 #7
    echo "Stage $Exec_install_mosquitto: installing Mosquitto"
        
-   if [[ "$Upgrade_requested" == 1 ]]
+   if [[ "$Upgrade_requested" == "1" ]]
       then
       Do_SetNextStage $Exec_install_nodered
       return      #nothing to do
@@ -446,7 +452,7 @@ function Do_Install_Mosquitto()
 #      sudo useradd -u 1002 mosquitto -m -d /home/mosquitto
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
-      while  [  $NoSuccessYet -ne 0 ] ; do
+      while  [[  $NoSuccessYet -ne 0 ]] ; do
          sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
          if [ "$?" -ne 0 ]
              then
@@ -482,7 +488,7 @@ function Do_Install_NodeRed()
    echo "        added 316 packages from 284 contributors"
    echo ""
    echo ""       
-   if [ "$Upgrade_requested" == 1 ]
+   if [[ "$Upgrade_requested" == 1 ]]
       then
       Do_SetNextStage $Exec_backup_solution
       return      #nothing to do
@@ -515,7 +521,7 @@ function Do_Install_NodeRed()
       mkdir /steady/neeo-custom/.node-red
       cd /steady/neeo-custom/.node-red
       npm install --unsafe-perm node-red  --no-fund
-      if [ "$?" -ne 0 ]
+      if [[ "$?" -ne 0 ]]
           then
          echo 'Install of NodeRed failed'
          GoOn=0
