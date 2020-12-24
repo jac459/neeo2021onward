@@ -653,11 +653,8 @@ function Do_Setup_PM2()
 #   fi 
    pm2 startup
    sleep 20s    #give pm2 time to update some files beofre starting the service
-   sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
-   #sudo PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
-   # sudo   /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
+   MyPM2=$(sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/)
    . ~/.bashrc
-#   sudo chown neeo /steady/neeo-custom/.pm2neeo/rpc.sock /steady/neeo-custom/.pm2neeo/pub.sock
 
    MyPM2=$(pm2 list)
    if [[ $(echo "$MyPM2" | grep -i 'mosquitto') == "" ]]
