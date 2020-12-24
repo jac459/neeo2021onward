@@ -440,30 +440,30 @@ function Do_Install_Mosquitto()
       Do_SetNextStage $Exec_install_nodered
       return      #nothing to do
    fi
- # MyMosquitto=$(command -v mosquitto)
- #  if [[ "$MyMosquitto" == "" ]]
- #     then 
-      sudo useradd -u 1002 mosquitto -m -d /home/mosquitto
-#      MyRetries=$RetryCountPacman
-#      NoSuccessYet=1
-#      while  [  $NoSuccessYet -ne 0 ] ; do
-#         sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
-#         if [ "$?" -ne 0 ]
-#             then
-#             if [[ $MyRetries -gt 1 ]]
-#                then 
-##                echo 'Error occured during Install of Mosquitto - retrying'
- #            else 
- #              echo ' Error occured during Install of Mosquitto - giving up'
- #              GoOn=0
- #              return
- #            fi          
- #        else
- #         NoSuccessYet=0       # signal done, break the loop
- #        fi
- #        ((MyRetries=MyRetries-1))
- #     done
- #  fi 
+  MyMosquitto=$(command -v mosquitto)
+   if [[ "$MyMosquitto" == "" ]]
+      then 
+#      sudo useradd -u 1002 mosquitto -m -d /home/mosquitto
+      MyRetries=$RetryCountPacman
+      NoSuccessYet=1
+      while  [  $NoSuccessYet -ne 0 ] ; do
+         sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
+         if [ "$?" -ne 0 ]
+             then
+             if [[ $MyRetries -gt 1 ]]
+                then 
+                echo 'Error occured during Install of Mosquitto - retrying'
+             else 
+                echo ' Error occured during Install of Mosquitto - giving up'
+               GoOn=0
+               return
+             fi          
+         else
+          NoSuccessYet=0       # signal done, break the loop
+         fi
+         ((MyRetries=MyRetries-1))
+      done
+   fi 
  
     Do_SetNextStage $Exec_install_nodered 
 }
@@ -480,7 +480,8 @@ function Do_Install_NodeRed()
    echo "     Check last statements, should be:"
    echo "        + node-red@1.2.6"
    echo "        added 316 packages from 284 contributors"
-       
+   echo ""
+   echo ""       
    if [ "$Upgrade_requested" == 1 ]
       then
       Do_SetNextStage $Exec_backup_solution
