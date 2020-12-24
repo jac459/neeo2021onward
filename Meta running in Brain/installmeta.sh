@@ -274,8 +274,10 @@ function Do_Reset_Pacman()
       then
       echo "Error in saving old perlbin-profile, not updating"
    else
-      sudo cat ~/perlbins1.sh /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh
+      cat ~/perlbins1.sh /etc/profile.d/perlbin.sh > ~/perlbin.sh 
+      sudo cp ~/perlbin.sh /etc/profile.d/perlbin.sh
       rm ~/perlbins1.sh
+      rm ~/perlbin.sh 
    fi
    popd  >/dev/null  
    Do_SetNextStage $Exec_install_nvm
@@ -424,16 +426,10 @@ function Do_Install_Meta()
         popd >/dev/null 
         return
    fi
-
    popd >/dev/null 
 
-   if [  "$UpgradeMetaOnly_requested" == "1" ]
-       then
-       Do_SetNextStage $Exec_setup_pm2
-   else
-       Do_SetNextStage $Exec_install_mosquitto
-        no need for install of pacman-packages, done witht tar
-   fi
+   Do_SetNextStage $Exec_install_mosquitto
+
 }
 
 function Do_Install_Mosquitto()
@@ -589,11 +585,9 @@ function Do_install_jq()
    MyRSync=$(command -v jq)
    if [[ "$MyRSync" == "" ]]
       then
-echo "need to install jq"
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
       while  [  $NoSuccessYet -ne 0 ] ; do
-echo "jq-1"
          sudo pacman -S --overwrite  '/*' --noconfirm  jq
          if [ "$?" -ne 0 ]
              then
@@ -658,7 +652,7 @@ function Do_Setup_PM2()
 #        echo 'sudo chmod 777 /steady/neeo-custom/.pm2neeo/rpc.sock'>> ~/.bashrc
 #   fi 
    pm2 startup
-   sleep 5s
+   sleep 20s    #give pm2 time to update some files beofre starting the service
    sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
    #sudo PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
    # sudo   /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
