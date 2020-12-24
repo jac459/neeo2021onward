@@ -1,4 +1,4 @@
-y#!/bin/bash
+#!/bin/bash
 #
 # Meta Installer for NEEO-Brain
 #
