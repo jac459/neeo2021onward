@@ -1,4 +1,4 @@
-y#!/bin/bash
+#!/bin/bash
 #
 # Meta Installer for NEEO-Brain
 #
@@ -23,27 +23,28 @@ Statedir="/steady/.installer"
 Statefile="$Statedir/state"
 FoundStage=0
 VersionFile="$Statedir/version"
-LatestVersion=1.3
+LatestVersion=1.5
 InstalledVersion=1.0  # assume that the first installer ran before.
 Upgrade_requested=0
 UpgradeMetaOnly_requested="0"
 GoOn=1                # the main loop controller
 RetryCountPacman=10   # becasue of the instability of some archlinux repositories, url-error 502 might occur
 
-#Following table maintains the version where a new or changed functionality was introduced; used to check if we need to execute an upgrade for a function  
-Function_0_Introduced=1.0
-Function_1_Introduced=1.0
-Function_2_Introduced=1.0
-Function_3_Introduced=1.0
-Function_4_Introduced=1.0
-Function_5_Introduced=1.0
-Function_6_Introduced=1.0
-Function_7_Introduced=1.0
-Function_8_Introduced=1.0
-Function_9_Introduced=1.0
-Function_A_Introduced=1.3
-Function_B_Introduced=1.3 
-Function_X_Introduced=1.2
+#Following table maintains the version where a new or changed functionality was AddedOrChanged; used to check if we need to execute an upgrade for a function  
+Function_0_AddedOrChanged=1.0
+Function_1_AddedOrChanged=1.0
+Function_2_AddedOrChanged=1.5
+Function_3_AddedOrChanged=1.0
+Function_4_AddedOrChanged=1.0
+Function_5_AddedOrChanged=1.0
+Function_6_AddedOrChanged=1.0
+Function_7_AddedOrChanged=1.0
+Function_8_AddedOrChanged=1.0
+Function_9_AddedOrChanged=1.0
+Function_A_AddedOrChanged=1.3
+Function_B_AddedOrChanged=1.3 
+Function_C_AddedOrChanged=1.5
+Function_X_AddedOrChanged=1.2
 
 # Following are the various stages that can be executed
 Exec_mount_root_stage=0
@@ -57,6 +58,8 @@ Exec_install_mosquitto=7
 Exec_install_nodered=8
 Exec_backup_solution=9 
 Exec_install_jq=A
+Exec_install_python=B
+Exec_install_broadlink=C
 Exec_setup_pm2=X 
 Exec_all_stages=0
 Exec_finish=Y 
@@ -235,16 +238,6 @@ function Do_Setup_steady_directory_struct()
    sudo chmod -R 775 /steady/neeo-custom
    Do_SetNextStage $Exec_reset_pacman
 
-   sudo echo "append_path () {
-       case \":$PATH:\" in
-           *:\"$\1\":*)
-               ;;
-           *)
-               PATH=\"${PATH:+$PATH:}$1\"
-       esac
-   }" > /etc/profile.d/perlbin.sh.new
-   sudo cp /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh.org
-   sudo mv /etc/profile.d/perlbin.sh.new /etc/profile.d/perlbin.sh
 }
 
 function Do_Reset_Pacman()
@@ -252,7 +245,7 @@ function Do_Reset_Pacman()
 #2
    echo "Stage $Exec_reset_pacman: Restoring pacman to a workable state"
 
-   if [ "$Upgrade_requested" == "1"  ] 
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_2_AddedOrChanged" ]]
       then 
        Do_SetNextStage $Exec_install_nvm
       return      #nothing to do
@@ -265,13 +258,36 @@ function Do_Reset_Pacman()
    tar -xvf ~/safepackages.tgz
    rm ~/safepackages.tgz
    cd var/cache/pacman/pkg
-   sudo pacman -Sy
-   sudo pacman -U * --noconfirm --force 
-   # this update will change /etc/passwd, removing the userid for the time sync-daemon
-   # let's add it again.  
-   sudo useradd systemd-timesync -m -d /home/systemd-timesync
+   
+   # First do a complete update of the system, with initialization of pacman-database
+   sudo pacman -Syu
 
-   popd  >/dev/null
+   # and as we found out, the package warning systemd-libs (247.2-1 causes problems with HTTP(S) not resolving anymore, so let's install an earlier version of it (downgrade it) 
+   sudo pacman -U systemd*  --noconfirm --force # will give: warning: downgrading package systemd-libs (247.2-1 => 246.6-1.1)
+
+   # this update will break the timesync-daemon, now requiring a userid for the time sync-daemon
+   # so let's add it.  
+   sudo useradd systemd-timesync -m -d /home/systemd-timesync
+   # and remove some annoying error-messages on login because of a missing dunction in perl
+   echo "append_path () {
+       case \":$PATH:\" in
+           *:\"$\1\":*)
+               ;;
+           *)
+               PATH=\"${PATH:+$PATH:}$1\"
+       esac
+   }" > ~/perlbins1.sh
+   sudo cp /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh.org
+   if [ "$?" -ne 0 ]
+      then
+      echo "Error in saving old perlbin-profile, not updating"
+   else
+      cat ~/perlbins1.sh /etc/profile.d/perlbin.sh > ~/perlbin.sh 
+      sudo cp ~/perlbin.sh /etc/profile.d/perlbin.sh
+      rm ~/perlbins1.sh
+      rm ~/perlbin.sh 
+   fi
+   popd  >/dev/null  
    Do_SetNextStage $Exec_install_nvm
 
 
@@ -282,7 +298,7 @@ function Do_Install_NVM()
 #3
     echo "Stage $Exec_install_nvm: installing NVM, then secondary npm&node"
        
-   if [ "$Upgrade_requested" == 1  ]
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_3_AddedOrChanged" ]]
       then
        Do_SetNextStage $Exec_finish_nvm
       return      #nothing to do
@@ -328,7 +344,7 @@ function Do_Finish_NVM()
 #4
    echo "Stage $Exec_finish_nvm: Finishing setup npm&node"
        
-   if [ "$Upgrade_requested" == 1 ]
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_4_AddedOrChanged" ]]
       then
       Do_SetNextStage $Exec_install_git
       return      #nothing to do
@@ -359,36 +375,36 @@ function Do_Install_Git()
 #5
    echo "Stage $Exec_install_git: installing GIT"
        
-#   if [ "$Upgrade_requested" == 1 ]
-#      then
-#      Do_SetNextStage $Exec_install_meta
-##      return      #nothing to do
-#   fi
-#  MyGit=$(command -v git)
-#  if [[ "$MyGit" == "" ]]
-##      then 
-#      MyRetries=$RetryCountPacman
-#      NoSuccessYet=1
-#      while  [  $NoSuccessYet -eq 1 ] ; do
-#         sudo pacman -S --overwrite  '/*' --noconfirm  git
-##         if [ "$?" -ne 0 ]
- ##            then
- #            if [[ $MyRetries -gt 1 ]]
- #               then 
- #               echo 'Error occured during Install of Git - retrying'
- #            else 
- #              echo ' Error occured during Install of Git - giving up'
- #              GoOn=0
- #              return
- #            fi          
- #        else
- #         NoSuccessYet=0       # signal done, break the loop
- ##        fi
- #        ((MyRetries=MyRetries-1))
- #     done
- #  else
- #     echo "Git is already installed"   
- #  fi
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_5_AddedOrChanged" ]]
+      then
+      Do_SetNextStage $Exec_install_meta
+      return      #nothing to do
+   fi
+   MyCommand=$(command -v git)
+   if [[ "$MyCommand" == "" ]]
+      then 
+      MyRetries=$RetryCountPacman
+      NoSuccessYet=1
+      while  [  $NoSuccessYet -eq 1 ] ; do
+         sudo pacman -S --overwrite  '/*' --noconfirm  git
+         if [ "$?" -ne 0 ]
+             then
+             if [[ $MyRetries -gt 1 ]]
+                then 
+                echo 'Error occured during Install of Git - retrying'
+             else 
+               echo ' Error occured during Install of Git - giving up'
+               GoOn=0
+               return
+             fi          
+         else
+           NoSuccessYet=0       # signal done, break the loop
+         fi
+         ((MyRetries=MyRetries-1))
+      done
+   else
+      echo "Git is already installed"   
+   fi
     Do_SetNextStage $Exec_install_meta
 
 }
@@ -398,10 +414,10 @@ function Do_Install_Meta()
 #6
    echo "Stage $Exec_install_meta: installing Metadriver (JAC459/metadriver)"
        
-   #if [ "$Upgrade_requested" == 1 ]
-   #   then
-   #   return                                                           # in tis case, upgrade will be requiresd
-   #fi
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_6_AddedOrChanged" ]]
+       then
+       return                                                           # in tis case, upgrade will be requiresd
+   fi
    pushd . >/dev/null 
 
    cd /steady/neeo-custom/ 
@@ -418,16 +434,10 @@ function Do_Install_Meta()
         popd >/dev/null 
         return
    fi
-
    popd >/dev/null 
 
-   if [  "$UpgradeMetaOnly_requested" == "1" ]
-       then
-       Do_SetNextStage $Exec_setup_pm2
-   else
-       Do_SetNextStage $Exec_install_mosquitto
-        no need for install of pacman-packages, done witht tar
-   fi
+   Do_SetNextStage $Exec_install_mosquitto
+
 }
 
 function Do_Install_Mosquitto()
@@ -435,35 +445,35 @@ function Do_Install_Mosquitto()
 #7
    echo "Stage $Exec_install_mosquitto: installing Mosquitto"
        
-   if [[ "$Upgrade_requested" == 1 ]]
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_7_AddedOrChanged" ]]
       then
       Do_SetNextStage $Exec_install_nodered
       return      #nothing to do
    fi
- # MyMosquitto=$(command -v mosquitto)
- #  if [[ "$MyMosquitto" == "" ]]
- #     then 
-      sudo useradd -u 1002 mosquitto -m -d /home/mosquitto
-#      MyRetries=$RetryCountPacman
-#      NoSuccessYet=1
-#      while  [  $NoSuccessYet -ne 0 ] ; do
-#         sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
-#         if [ "$?" -ne 0 ]
-#             then
-#             if [[ $MyRetries -gt 1 ]]
-#                then 
-##                echo 'Error occured during Install of Mosquitto - retrying'
- #            else 
- #              echo ' Error occured during Install of Mosquitto - giving up'
- #              GoOn=0
- #              return
- #            fi          
- #        else
- #         NoSuccessYet=0       # signal done, break the loop
- #        fi
- #        ((MyRetries=MyRetries-1))
- #     done
- #  fi 
+   MyCommand=$(command -v mosquitto)
+   if [[ "$MyCommand" == "" ]]
+      then 
+#      sudo useradd -u 1002 mosquitto -m -d /home/mosquitto
+      MyRetries=$RetryCountPacman
+      NoSuccessYet=1
+      while  [[  $NoSuccessYet -ne 0 ]] ; do
+         sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
+         if [ "$?" -ne 0 ]
+             then
+             if [[ $MyRetries -gt 1 ]]
+                then 
+                echo 'Error occured during Install of Mosquitto - retrying'
+             else 
+                echo ' Error occured during Install of Mosquitto - giving up'
+               GoOn=0
+               return
+             fi          
+         else
+          NoSuccessYet=0       # signal done, break the loop
+         fi
+         ((MyRetries=MyRetries-1))
+      done
+   fi 
  
     Do_SetNextStage $Exec_install_nodered 
 }
@@ -473,6 +483,12 @@ function Do_Install_NodeRed()
 #8
    echo "Stage $Exec_install_nodered: installing Node-Red"
 
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_8_AddedOrChanged" ]]
+      then
+      Do_SetNextStage $Exec_backup_solution
+      return      #nothing to do
+   fi
+
    echo ""
    echo ""
    echo "This tsk will run and multiple ways to install are attempted"
@@ -480,12 +496,8 @@ function Do_Install_NodeRed()
    echo "     Check last statements, should be:"
    echo "        + node-red@1.2.6"
    echo "        added 316 packages from 284 contributors"
-       
-   if [ "$Upgrade_requested" == 1 ]
-      then
-      Do_SetNextStage $Exec_backup_solution
-      return      #nothing to do
-   fi
+   echo ""
+   echo ""       
 
 
    #sudo npm install -g --unsafe-perm node-red # since 2020-12-05, global install produces the following error :
@@ -514,7 +526,7 @@ function Do_Install_NodeRed()
       mkdir /steady/neeo-custom/.node-red
       cd /steady/neeo-custom/.node-red
       npm install --unsafe-perm node-red  --no-fund
-      if [ "$?" -ne 0 ]
+      if [[ "$?" -ne 0 ]]
           then
          echo 'Install of NodeRed failed'
          GoOn=0
@@ -535,13 +547,13 @@ function Do_Backup_solution()
 #9
    echo "Stage $Exec_backup_solution: Setting up backup"
 
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_9_Introduced" ]]
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_9_AddedOrChanged" ]]
       then
       Do_SetNextStage $Exec_install_jq
    fi
 
-  MyRSync=$(command -v rsync)
-   if [[ "$MyRSync" == "" ]]
+   MyCommand=$(command -v rsync)
+   if [[ "$MyCommand" == "" ]]
       then 
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
@@ -573,20 +585,18 @@ function Do_install_jq()
    echo "Stage $Exec_install_jq : add jq package"
 
 
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_A_Introduced" ]]
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_A_AddedOrChanged" ]]
       then
       Do_SetNextStage $Exec_setup_pm2
       return      #nothing to do
    fi
 
-   MyRSync=$(command -v jq)
-   if [[ "$MyRSync" == "" ]]
+   MyCommand=$(command -v jq)
+   if [[ "$MyCommand" == "" ]]
       then
-echo "need to install jq"
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
       while  [  $NoSuccessYet -ne 0 ] ; do
-echo "jq-1"
          sudo pacman -S --overwrite  '/*' --noconfirm  jq
          if [ "$?" -ne 0 ]
              then
@@ -605,7 +615,91 @@ echo "jq-1"
       done
    fi
 
-   Do_SetNextStage $Exec_setup_pm2
+   Do_SetNextStage $Exec_install_python
+
+}
+
+
+function Do_install_python()
+{
+#B
+   echo "Stage $Exec_install_python : add python3 package"
+
+
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_B_AddedOrChanged" ]]
+      then
+      Do_SetNextStage $Exec_setup_pm2
+      return      #nothing to do
+   fi
+
+   MyCommand=$(command -v python3)
+   if [[ "$MyCommand" == "" ]]
+      then
+      MyRetries=$RetryCountPacman
+      NoSuccessYet=1
+      while  [  $NoSuccessYet -ne 0 ] ; do
+         sudo pacman -S --overwrite  '/*' --noconfirm  python python-pip
+         if [ "$?" -ne 0 ]
+             then
+             if [[ $MyRetries -gt 1 ]]
+                then
+                echo 'Error occured during Install of python - retrying'
+             else
+               echo ' Error occured during Install of python         - giving up'
+               GoOn=0
+               return
+             fi
+         else
+          NoSuccessYet=0       # signal done, break the loop
+         fi
+         ((MyRetries=MyRetries-1))
+      done
+   fi  
+       
+   Do_SetNextStage $Exec_install_broadlink
+   
+}
+
+function Do_install_broadlink()
+{
+#C
+   echo "Stage $Exec_install_broadlink : add broadlink support"
+   NextStep=$Exec_setup_pm2
+
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_C_AddedOrChanged" ]]
+      then
+      Do_SetNextStage $NextStep
+      return      #nothing to do
+   fi
+
+   MyCommand=$(command -v python3)
+   if [[ "$MyCommand" == "" ]]
+      then
+      MyRetries=$RetryCountPacman
+      NoSuccessYet=1
+      while  [  $NoSuccessYet -ne 0 ] ; do
+         pushd . >/dev/null
+         cd /steady/neeo-custom
+         if [[ ! -e ".broadlink" ]]
+            then
+            mkdir .broadlink
+         cd .broadlink
+
+         git clone https://github.com/mjg59/python-broadlink
+         if [ "$?" -ne 0 ]
+             echo 'Error occured during download of broadlink support'
+             GoOn=0
+             return
+         fi 
+         sudo python python-broadlink/setup.py install
+         if [ "$?" -ne 0 ]
+             then
+             echo 'Error occured during Install of broadlink support'
+             GoOn=0
+             return
+         fi 
+
+   Do_SetNextStage $NextStep
 
 }
 
@@ -616,15 +710,16 @@ function Do_Setup_PM2()
 #sudo systemctl stop neeo-pm2.service
 #sudo systemctl disable neeo-pm2.service
    echo "Stage $Exec_setup_pm2: Activating services in PM2"
-       
+      NextStep=$Exec_finish   
+    
    if [[  "$UpgradeMetaOnly_requested" == "1" ]]
       then 
          pm2 restart meta
-         Do_SetNextStage $Exec_finish
+         Do_SetNextStage $NextStep
          return
    fi 
    
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_X_Introduced" ]]
+   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_X_AddedOrChanged" ]]
       then
      if [[  -e "/steady/neeo-custom.pm2" ]] #old PM2 has bug, it runs everything as root, so remove old PM2
         then
@@ -651,11 +746,9 @@ function Do_Setup_PM2()
 #        echo 'sudo chmod 777 /steady/neeo-custom/.pm2neeo/rpc.sock'>> ~/.bashrc
 #   fi 
    pm2 startup
-   sleep 5s
-   sudo PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
-   # sudo   /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/
+   sleep 20s    #give pm2 time to update some files beofre starting the service
+   MyPM2=$(sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/)
    . ~/.bashrc
-#   sudo chown neeo /steady/neeo-custom/.pm2neeo/rpc.sock /steady/neeo-custom/.pm2neeo/pub.sock
 
    MyPM2=$(pm2 list)
    if [[ $(echo "$MyPM2" | grep -i 'mosquitto') == "" ]]
@@ -697,7 +790,7 @@ function Do_Setup_PM2()
    popd >/dev/null
 
    pm2 save
-   Do_SetNextStage $Exec_finish
+   Do_SetNextStage $NextStep
 }
 
 function Do_Upgrade()
@@ -857,6 +950,13 @@ while (( "$GoOn"==1 )); do
        $Exec_install_jq)
           Do_install_jq
        ;;
+       $Exec_install_python)
+          Do_install_python
+       ;;
+       $Exec_install_broadlink)
+          Do_install_broadlink
+       ;;
+       $Exec_setup_pm2)
        $Exec_setup_pm2)
           Do_Setup_PM2
        ;;
