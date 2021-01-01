@@ -185,11 +185,12 @@ function Do_Mount_root()
 {
 #0
    echo "Stage 0: Setup a rewritable root-partition (includes entry in /etc/fstab)"
+   NextStep=$Exec_setup_steady_stage
 
    if [ "$Upgrade_requested" == 1   ]
       then 
       echo "skip this step"
-      Do_SetNextStage $Exec_setup_steady_stage
+      Do_SetNextStage $NextStep
       return      #nothing to do
    fi  
 
@@ -219,24 +220,25 @@ function Do_Mount_root()
     else
        echo "/etc/fstab was already patched, so it seems, continuing"
     fi
-    Do_SetNextStage $Exec_setup_steady_stage
+    Do_SetNextStage $NextStep
 } 
 
 function Do_Setup_steady_directory_struct()
 {
 #1  
    echo "Stage $Exec_setup_steady_stage: Setting up directories and rights"
+   NextStep=$Exec_reset_pacman
 
    if [ "$Upgrade_requested" == 1   ] 
       then 
-      Do_SetNextStage $Exec_reset_pacman  
+      Do_SetNextStage $NextStep  
       return      #nothing to do
    fi
 
    sudo mkdir /steady/neeo-custom
    sudo chown neeo:wheel /steady/neeo-custom
    sudo chmod -R 775 /steady/neeo-custom
-   Do_SetNextStage $Exec_reset_pacman
+   Do_SetNextStage $NextStep
 
 }
 
@@ -244,51 +246,75 @@ function Do_Reset_Pacman()
 {
 #2
    echo "Stage $Exec_reset_pacman: Restoring pacman to a workable state"
+   NextStep=$Exec_install_nvm
 
    if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_2_AddedOrChanged" ]]
       then 
-       Do_SetNextStage $Exec_install_nvm
+       Do_SetNextStage $NextStep
       return      #nothing to do
    fi
-   sudo ln -s /etc/ca-certificates/extracted/ca-bundle.trust.crt /etc/ssl/certs/ca-certificates.crt
-   curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/safepackages.tgz' -o ~/safepackages.tgz 
-   pushd . >/dev/null
-   mkdir ~/safepackages
-   cd ~/safepackages
-   tar -xvf ~/safepackages.tgz
-   rm ~/safepackages.tgz
-   cd var/cache/pacman/pkg
+#   sudo ln -s /etc/ca-certificates/extracted/ca-bundle.trust.crt /etc/ssl/certs/ca-certificates.crt
+
+   pushd .  >/dev/null
+    if [ -e ~/safepackages/var/cache/pacman/pkg/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz ]
+       then
+      echo "Saved package(s) already downloaded"
+    else
+	curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/safepackages.tgz' -o ~/safepackages.tgz 
+	pushd . >/dev/null
+   	mkdir ~/safepackages
+   	cd ~/safepackages
+   	tar -xvf ~/safepackages.tgz
+   	rm ~/safepackages.tgz
+   	cd var/cache/pacman/pkg
+    fi
    
    # First do a complete update of the system, with initialization of pacman-database
-   sudo pacman -Syu
+   sudo pacman -Sy
+   MyPacman=$(pacman --version)
+
+   if [[ "$MyPacman" == *"Pacman v5.0.2"* ]]; then
+        echo "5.0.2" 
+   	sudo pacman -Su pacman --noconfirm --force
+   else
+        echo "5.2.2"
+   	sudo pacman -Su pacman --noconfirm --overwrite '/*'
+   fi
+
 
    # and as we found out, the package warning systemd-libs (247.2-1 causes problems with HTTP(S) not resolving anymore, so let's install an earlier version of it (downgrade it) 
-   sudo pacman -U systemd*  --noconfirm --force # will give: warning: downgrading package systemd-libs (247.2-1 => 246.6-1.1)
+   cd ~/safepackages/var/cache/pacman/pkg
+   sudo pacman -U systemd*  --noconfirm --overwrite '/*' # will give: warning: downgrading package systemd-libs (247.2-1 => 246.6-1.1)
 
    # this update will break the timesync-daemon, now requiring a userid for the time sync-daemon
    # so let's add it.  
    sudo useradd systemd-timesync -m -d /home/systemd-timesync
    # and remove some annoying error-messages on login because of a missing dunction in perl
-   echo "append_path () {
-       case \":$PATH:\" in
-           *:\"$\1\":*)
-               ;;
-           *)
-               PATH=\"${PATH:+$PATH:}$1\"
-       esac
-   }" > ~/perlbins1.sh
-   sudo cp /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh.org
-   if [ "$?" -ne 0 ]
-      then
-      echo "Error in saving old perlbin-profile, not updating"
-   else
-      cat ~/perlbins1.sh /etc/profile.d/perlbin.sh > ~/perlbin.sh 
-      sudo cp ~/perlbin.sh /etc/profile.d/perlbin.sh
-      rm ~/perlbins1.sh
-      rm ~/perlbin.sh 
+
+    MyPerlAppend=$(cat /etc/profile.d/perlbin.sh |grep 'append_path ()')
+    if [ "$?" -ne 0 ]
+       then
+        echo "append_path () {
+          case \":$PATH:\" in
+              *:\"$\1\":*)
+                  ;;
+              *)
+                  PATH=\"${PATH:+$PATH:}$1\"
+          esac
+        }" > ~/perlbins1.sh
+        sudo cp /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh.org
+        if [ "$?" -ne 0 ]
+           then
+           echo "Error in saving old perlbin-profile, not updating"
+        else
+           cat ~/perlbins1.sh /etc/profile.d/perlbin.sh > ~/perlbin.sh 
+           sudo cp ~/perlbin.sh /etc/profile.d/perlbin.sh
+           rm ~/perlbins1.sh
+           rm ~/perlbin.sh 
+        fi
    fi
    popd  >/dev/null  
-   Do_SetNextStage $Exec_install_nvm
+   Do_SetNextStage $NextStep
 
 
 }
@@ -296,11 +322,12 @@ function Do_Reset_Pacman()
 function Do_Install_NVM()
 {
 #3
-    echo "Stage $Exec_install_nvm: installing NVM, then secondary npm&node"
-       
+   echo "Stage $Exec_install_nvm: installing NVM, then secondary npm&node"
+   NextStep=$Exec_finish_nvm      
+
    if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_3_AddedOrChanged" ]]
       then
-       Do_SetNextStage $Exec_finish_nvm
+       Do_SetNextStage $NextStep
       return      #nothing to do
    fi
 
@@ -335,7 +362,7 @@ function Do_Install_NVM()
         echo 'export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2' >> ~/.bashrc
     fi
     . ~/.bashrc
-    Do_SetNextStage $Exec_finish_nvm
+    Do_SetNextStage $NextStep
 
 }
 
@@ -343,10 +370,11 @@ function Do_Finish_NVM()
 {
 #4
    echo "Stage $Exec_finish_nvm: Finishing setup npm&node"
+   NextStep=$Exec_install_git
        
    if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_4_AddedOrChanged" ]]
       then
-      Do_SetNextStage $Exec_install_git
+      Do_SetNextStage $NextStep
       return      #nothing to do
    fi
    MyNPM=$(npm -v)
@@ -366,7 +394,7 @@ function Do_Finish_NVM()
       fi 
    fi
        popd >/dev/null 
-    Do_SetNextStage $Exec_install_git
+    Do_SetNextStage $NextStep
 
 }
 
@@ -374,10 +402,11 @@ function Do_Install_Git()
 {
 #5
    echo "Stage $Exec_install_git: installing GIT"
-       
+   NextStep=$Exec_install_meta     
+
    if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_5_AddedOrChanged" ]]
       then
-      Do_SetNextStage $Exec_install_meta
+      Do_SetNextStage $NextStep
       return      #nothing to do
    fi
    MyCommand=$(command -v git)
@@ -405,7 +434,7 @@ function Do_Install_Git()
    else
       echo "Git is already installed"   
    fi
-    Do_SetNextStage $Exec_install_meta
+    Do_SetNextStage $NextStep
 
 }
 
@@ -413,12 +442,14 @@ function Do_Install_Meta()
 {
 #6
    echo "Stage $Exec_install_meta: installing Metadriver (JAC459/metadriver)"
-       
+   NextStep=$Exec_install_mosquitto     
+
    if [[ ! "$UpgradeMetaOnly_requested" == "1" ]]
       then
       if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_6_AddedOrChanged" ]]    
           then
-          return                                                           # in tis case, upgrade will be requiresd
+          Do_SetNextStage $Exec_finish
+          return                                                           # in this case, upgrade will be requiresd
       fi
    fi
    pushd . >/dev/null 
@@ -439,7 +470,12 @@ function Do_Install_Meta()
    fi
    popd >/dev/null 
 
-   Do_SetNextStage $Exec_install_mosquitto
+   if [[  "$UpgradeMetaOnly_requested" == "1" ]]
+      then
+      Do_SetNextStage $Exec_finish
+   fi
+
+   Do_SetNextStage $NextStep
 
 }
 
@@ -447,10 +483,11 @@ function Do_Install_Mosquitto()
 {
 #7
    echo "Stage $Exec_install_mosquitto: installing Mosquitto"
-       
+   NextStep=$Exec_install_nodered      
+
    if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_7_AddedOrChanged" ]]
       then
-      Do_SetNextStage $Exec_install_nodered
+      Do_SetNextStage $NextStep
       return      #nothing to do
    fi
    MyCommand=$(command -v mosquitto)
@@ -478,17 +515,18 @@ function Do_Install_Mosquitto()
       done
    fi 
  
-    Do_SetNextStage $Exec_install_nodered 
+    Do_SetNextStage $NextStep
 }
 
 function Do_Install_NodeRed()
 {   
 #8
    echo "Stage $Exec_install_nodered: installing Node-Red"
+   NextStep=$Exec_backup_solution
 
    if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_8_AddedOrChanged" ]]
       then
-      Do_SetNextStage $Exec_backup_solution
+      Do_SetNextStage $NextStep
       return      #nothing to do
    fi
 
@@ -540,8 +578,7 @@ function Do_Install_NodeRed()
       ln -s red.js node-red.js
       popd >/dev/null
    fi 
-#   Do_SetNextStage $Exec_setup_pm2     
-   Do_SetNextStage $Exec_backup_solution 
+   Do_SetNextStage $NextStep 
 
 }
 
@@ -549,10 +586,11 @@ function Do_Backup_solution()
 {
 #9
    echo "Stage $Exec_backup_solution: Setting up backup"
+   NextStep=$Exec_install_jq
 
    if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_9_AddedOrChanged" ]]
       then
-      Do_SetNextStage $Exec_install_jq
+      Do_SetNextStage $NextStep
    fi
 
    MyCommand=$(command -v rsync)
@@ -578,7 +616,7 @@ function Do_Backup_solution()
          ((MyRetries=MyRetries-1))
       done 
    fi 
-   Do_SetNextStage $Exec_install_jq
+   Do_SetNextStage $NextStep
 
 }
 
@@ -586,11 +624,11 @@ function Do_install_jq()
 {
 #A
    echo "Stage $Exec_install_jq : add jq package"
-
+   NextStep=$Exec_install_python
 
    if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_A_AddedOrChanged" ]]
       then
-      Do_SetNextStage $Exec_setup_pm2
+      Do_SetNextStage $NextStep
       return      #nothing to do
    fi
 
@@ -618,7 +656,7 @@ function Do_install_jq()
       done
    fi
 
-   Do_SetNextStage $Exec_install_python
+   Do_SetNextStage $NextStep
 
 }
 
@@ -627,11 +665,11 @@ function Do_install_python()
 {
 #B
    echo "Stage $Exec_install_python : add python3 package"
-
+   NextStep=$Exec_install_broadlink
 
    if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_B_AddedOrChanged" ]]
       then
-      Do_SetNextStage $Exec_setup_pm2
+      Do_SetNextStage $NextStep
       return      #nothing to do
    fi
 
@@ -714,7 +752,7 @@ function Do_Setup_PM2()
 #sudo systemctl stop neeo-pm2.service
 #sudo systemctl disable neeo-pm2.service
    echo "Stage $Exec_setup_pm2: Activating services in PM2"
-      NextStep=$Exec_finish   
+   NextStep=$Exec_finish   
     
    if [[  "$UpgradeMetaOnly_requested" == "1" ]]
       then 
