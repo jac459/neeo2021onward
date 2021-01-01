@@ -414,9 +414,12 @@ function Do_Install_Meta()
 #6
    echo "Stage $Exec_install_meta: installing Metadriver (JAC459/metadriver)"
        
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_6_AddedOrChanged" ]]
-       then
-       return                                                           # in tis case, upgrade will be requiresd
+   if [[ ! "$UpgradeMetaOnly_requested" == "1" ]]
+      then
+      if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_6_AddedOrChanged" ]]    
+          then
+          return                                                           # in tis case, upgrade will be requiresd
+      fi
    fi
    pushd . >/dev/null 
 
@@ -672,35 +675,36 @@ function Do_install_broadlink()
       return      #nothing to do
    fi
 
-   MyCommand=$(command -v python3)
-   if [[ "$MyCommand" == "" ]]
-      then
-      MyRetries=$RetryCountPacman
-      NoSuccessYet=1
-      while  [  $NoSuccessYet -ne 0 ] ; do
-         pushd . >/dev/null
-         cd /steady/neeo-custom
-         if [[ ! -e ".broadlink" ]]
-            then
-            mkdir .broadlink
-         cd .broadlink
+   if [[ ! -e /steady/neeo-custom/.broadlink ]]
+      then 
+      pushd . >/dev/null
+      cd /steady/neeo-custom
+      if [[ ! -e ".broadlink" ]]
+         then
+         mkdir .broadlink
+      fi
+      cd .broadlink
 
-         git clone https://github.com/mjg59/python-broadlink
-         if [ "$?" -ne 0 ]
-             echo 'Error occured during download of broadlink support'
-             GoOn=0
-             return
-         fi 
-         sudo python python-broadlink/setup.py install
-         if [ "$?" -ne 0 ]
-             then
-             echo 'Error occured during Install of broadlink support'
-             GoOn=0
-             return
-         fi 
+      git clone https://github.com/mjg59/python-broadlink
+      if [ "$?" -ne 0 ]
+         then
+            echo 'Error occured during download of broadlink - retrying'
+            popd >/dev/null
+            GoOn=0
+            return
+      fi
+      sudo python python-broadlink/setup.py install
+      if [ "$?" -ne 0 ]
+         then
+         popd >/dev/null
+         echo 'Error occured during Install of broadlink support'
+         GoOn=0
+         return
+      fi
+      popd >/dev/null
+   fi
 
    Do_SetNextStage $NextStep
-
 }
 
 function Do_Setup_PM2()
@@ -956,7 +960,6 @@ while (( "$GoOn"==1 )); do
        $Exec_install_broadlink)
           Do_install_broadlink
        ;;
-       $Exec_setup_pm2)
        $Exec_setup_pm2)
           Do_Setup_PM2
        ;;
