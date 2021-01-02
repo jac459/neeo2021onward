@@ -863,13 +863,10 @@ function Do_Setup_PM2()
    fi 
 
 
-   if [[ $(echo "$MyPM2" | grep -i 'meta') == "" ]];
-      then    
-      cd /steady/neeo-custom/.meta/node_modules/\@jac459/metadriver
-      pm2 start meta.js
-   else 
-      pm2 restart meta
-   fi 
+   DelPM2Meta=$(pm2 delete meta) 
+   cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver   
+   pm2 start --name meta meta.js -- '-A' '{"Brain":"localhost","LogSeverity":"VERBOSE","components":["meta", "variablesVault", "metaController"]}'
+
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding meta-start to PM2"
