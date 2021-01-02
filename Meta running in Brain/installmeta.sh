@@ -511,7 +511,7 @@ function Do_Install_Meta()
 
    if [[  "$UpgradeMetaOnly_requested" == "1" ]]
       then
-      Do_SetNextStage $Exec_finish
+      Do_SetNextStage $Exec_setup_pm2
       return 
    fi
 
@@ -863,9 +863,8 @@ function Do_Setup_PM2()
    fi 
 
 
-   DelPM2Meta=$(pm2 delete meta) 
-   cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver   
-   pm2 start --name meta meta.js -- '-A' '{"Brain":"localhost","LogSeverity":"VERBOSE","components":["meta", "variablesVault", "metaController"]}'
+   DelPM2Meta=$(pm2 delete meta)
+   pm2 start --name meta meta.js -- -A "{\"Brain\":\"localhost\",\"LogSeverity\":\"VERBOSE\",\"Components\":[\"meta\"]}"
 
    if [[ "$?" != 0 ]]
       then 
@@ -891,7 +890,7 @@ function Do_Upgrade()
       echo "Please let installer run first to a successful end before upgrading: $FoundStage"
       Upgrade_requested=0       # reset update-request to no
    else
-      if [  "$UpgradeMetaOnly_requested" == "1" ]
+      if [[  "$UpgradeMetaOnly_requested" == "1" ]]
             then 
             echo "We will be upgrading metadriver only; then we will restart metadriver"
             Do_SetNextStage "$Exec_install_meta"
@@ -979,12 +978,12 @@ GoOn=1
 Do_ReadState                   # check to see if we ran before; if so, get the state of the previous runs and the version of installer thatran
 echo $InstalledVersion
 
-echo "We are running in stage $FoundStage of 9"
+echo "We are running in stage $FoundStage of $Exec_finish_done"
 
 # Do we need to run a special check first, before entering the state-machine?
 if [[ "$Upgrade_requested" == "1"  ||  "$FoundStage" == "Z" ]]
     then
-      $Upgrade_requested = "1"
+      Upgrade_requested="1"
       Do_Upgrade                                    # Check if upgrade is possible/allowed
       if [ "$Upgrade_requested" != "1" ]              # Did Do_Upgrade function made a decision overriding update-request?
          then
