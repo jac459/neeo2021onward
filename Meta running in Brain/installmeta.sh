@@ -235,12 +235,48 @@ function Do_Setup_steady_directory_struct()
       return      #nothing to do
    fi
 
-   sudo mkdir /steady/neeo-custom
-   sudo chown neeo:wheel /steady/neeo-custom
-   sudo chmod -R 775 /steady/neeo-custom
+   if [ ! -e /steady/neeo-custom ]
+      then   
+      sudo mkdir /steady/neeo-custom
+      sudo chown neeo:wheel /steady/neeo-custom
+      sudo chmod -R 775 /steady/neeo-custom
+   fi
    Do_SetNextStage $NextStep
-
 }
+
+function SubFunction_Update_Pacman()
+{
+#2a
+
+   #Before updating, we need to download old, saved package for systemd. 
+   #Because the systemd-update somehow blocks all HTTP(S)- traffic, so we do it now
+
+   # and as we found out, the package  systemd-libs (247.2-1 causes problems with HTTP(S) not resolving anymore, so let's install an earlier version of it (downgrade it) 
+   pushd .  >/dev/null
+   if [ -e ~/safepackages/var/cache/pacman/pkg/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz ]
+      then
+      echo "Saved package(s) already downloaded"
+   else
+      curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/safepackages.tgz' -o ~/safepackages.tgz 
+      mkdir ~/safepackages
+   	cd ~/safepackages
+   	tar -xvf ~/safepackages.tgz
+   	rm ~/safepackages.tgz
+   	cd var/cache/pacman/pkg
+   fi
+
+   sudo pacman -Su pacman --noconfirm --force    # use old style pacman command
+
+   # and downgrade systemd-package 
+   cd ~/safepackages/var/cache/pacman/pkg
+   sudo pacman -U systemd*  --noconfirm --overwrite '/*' # will give: warning: downgrading package systemd-libs (247.2-1 => 246.6-1.1)
+# and as we found out, the package  systemd-libs (247.2-1 causes problems with HTTP(S) not resolving anymore, so let's install an earlier version of it (downgrade it) 
+   cd ~/safepackages/var/cache/pacman/pkg
+   cd ~
+   rm -r ~/safepackages
+
+   popd >/dev/null
+} 
 
 function Do_Reset_Pacman()
 {
@@ -253,44 +289,39 @@ function Do_Reset_Pacman()
        Do_SetNextStage $NextStep
       return      #nothing to do
    fi
-#   sudo ln -s /etc/ca-certificates/extracted/ca-bundle.trust.crt /etc/ssl/certs/ca-certificates.crt
 
-   pushd .  >/dev/null
-    if [ -e ~/safepackages/var/cache/pacman/pkg/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz ]
-       then
-      echo "Saved package(s) already downloaded"
-    else
-	curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/safepackages.tgz' -o ~/safepackages.tgz 
-	pushd . >/dev/null
-   	mkdir ~/safepackages
-   	cd ~/safepackages
-   	tar -xvf ~/safepackages.tgz
-   	rm ~/safepackages.tgz
-   	cd var/cache/pacman/pkg
-    fi
-   
-   # First do a complete update of the system, with initialization of pacman-database
-   sudo pacman -Sy
-   MyPacman=$(pacman --version)
-
-   if [[ "$MyPacman" == *"Pacman v5.0.2"* ]]; then
-        echo "5.0.2" 
-   	sudo pacman -Su pacman --noconfirm --force
-   else
-        echo "5.2.2"
-   	sudo pacman -Su pacman --noconfirm --overwrite '/*'
+   MyYear=$(date +'%Y')   # Test to see if we have a corruoted date (timesyncd fails)
+   if [[ "$MyYear" == "2018" ]]
+      then                # we have the bug
+      sudo date -s '2021-01-01 00:00:00'  # set a more recent date so that we do not have issues with certificates
    fi
 
+   MyPacman=$(sudo pacman -Q) # Are Pacman's package-databases already updated?
+   if [ "$?" -ne 0 ]
+      then
+      echo "Filling Pacman's repositories" 
+      sudo pacman -Sy   
+   fi
 
-   # and as we found out, the package warning systemd-libs (247.2-1 causes problems with HTTP(S) not resolving anymore, so let's install an earlier version of it (downgrade it) 
-   cd ~/safepackages/var/cache/pacman/pkg
-   sudo pacman -U systemd*  --noconfirm --overwrite '/*' # will give: warning: downgrading package systemd-libs (247.2-1 => 246.6-1.1)
+   pushd .  >/dev/null
 
-   # this update will break the timesync-daemon, now requiring a userid for the time sync-daemon
-   # so let's add it.  
-   sudo useradd systemd-timesync -m -d /home/systemd-timesync
+   if [[ ! "$MyPacman" == *"Pacman v5.0.2"* ]]; then 
+      # pacman is higher than 5.0.2? (5.0.2. = neeo-supplied level)
+      echo "Pacman is already at the correct level"
+   	#sudo pacman -Su pacman --noconfirm --overwrite '/*' #use  new style
+   else
+      echo "Running old system-files, need to update"
+      SubFunction_Update_Pacman     # call subfunction to handle updating the system and pacman
+   fi
+   # the update will break the timesync-daemon, now requiring a userid for the time sync-daemon
+   # so let's add it if it's not there yet.  
+   MyPasswd=$(cat /etc/passwd | grep -i systemd-timesync)
+   if [ "$?" -ne 0 ]
+      then
+       sudo useradd systemd-timesync -m -d /home/systemd-timesync
+   fi
+
    # and remove some annoying error-messages on login because of a missing dunction in perl
-
     MyPerlAppend=$(cat /etc/profile.d/perlbin.sh |grep 'append_path ()')
     if [ "$?" -ne 0 ]
        then
@@ -331,38 +362,46 @@ function Do_Install_NVM()
       return      #nothing to do
    fi
 
-    if [ -e ~/.nvm ]
-       then 
-      echo "NVM already installed"
-    else   
-      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
-    fi 
-    sudo chmod -R ugo+rx /home/neeo/.nvm 
-    MyBashrc=$(cat ~/.bashrc |grep 'export NVM_DIR="$HOME/.nvm')
-    if [ "$?" -ne 0 ]
-       then
-        echo 'export NVM_DIR="$HOME/.nvm" ' >> ~/.bashrc
-        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm'>> ~/.bashrc
-    fi
-    . ~/.bashrc   
-    nvm install --lts=erbium
-    if [ "$?" -ne 0 ]
-       then
-        echo 'Error installing npm&node (nvm install --lts=erbium)'
+      if [ -e  ~/.nvm/nvm.sh ]
+         then 
+         echo "NVM already installed"
+      else   
+         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
+         sudo chmod -R ugo+rx /home/neeo/.nvm 
+      fi
 
-        echo 'This error happens sometimes and is easy to fix'
-        echo 'Please execute the following command, then run installmeta again: . ~/.bashrc (yes: dot blank dot!)'
-        sleep 10s
-        GoOn=0
-        return
-    fi
-    MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2')   # add some usefull commands to .bashrc to make life easier
-    if [ "$?" -ne 0 ]
-       then
-        echo 'export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2' >> ~/.bashrc
-    fi
-    . ~/.bashrc
-    Do_SetNextStage $NextStep
+   MyBashrc=$(cat ~/.bashrc |grep 'export NVM_DIR="$HOME/.nvm')
+   if [ "$?" -ne 0 ]
+      then
+       echo 'export NVM_DIR="$HOME/.nvm" ' >> ~/.bashrc
+       echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm'>> ~/.bashrc
+   fi
+   . ~/.bashrc   
+
+   MyNode=$(node -v)
+   if [[ $MyNode == "v12.20.0" ]]
+      then
+      echo "Node is already installed"
+   else
+      nvm install --lts=erbium
+      if [ "$?" -ne 0 ]
+         then
+          echo 'Error installing npm&node (nvm install --lts=erbium)'
+          echo 'This error happens sometimes and is easy to fix'
+          echo 'Please execute the following command, then run installmeta again: . ~/.bashrc (yes: dot blank dot!)'
+          sleep 10s
+          GoOn=0
+          return
+      fi
+   fi
+
+   MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2')   # add some usefull commands to .bashrc to make life easier
+   if [ "$?" -ne 0 ]
+      then
+       echo 'export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2' >> ~/.bashrc
+   fi
+   . ~/.bashrc
+   Do_SetNextStage $NextStep
 
 }
 
@@ -378,7 +417,7 @@ function Do_Finish_NVM()
       return      #nothing to do
    fi
    MyNPM=$(npm -v)
-   if [[ "$MyNPM" == "6.14.9" ]]
+   if [[ ! "$MyNPM" == "" ]]  
       then
       echo "NPM 6.14.9 was already installed, skipping" 
    else
@@ -473,6 +512,7 @@ function Do_Install_Meta()
    if [[  "$UpgradeMetaOnly_requested" == "1" ]]
       then
       Do_SetNextStage $Exec_finish
+      return 
    fi
 
    Do_SetNextStage $NextStep
@@ -530,17 +570,6 @@ function Do_Install_NodeRed()
       return      #nothing to do
    fi
 
-   echo ""
-   echo ""
-   echo "This tsk will run and multiple ways to install are attempted"
-   echo "    Therefore you WILL see errors, IGNORE ˜THEM!"
-   echo "     Check last statements, should be:"
-   echo "        + node-red@1.2.6"
-   echo "        added 316 packages from 284 contributors"
-   echo ""
-   echo ""       
-
-
    #sudo npm install -g --unsafe-perm node-red # since 2020-12-05, global install produces the following error :
 #        > publish-please@5.5.2 preinstall /home/neeo/.nvm/versions/node/v12.20.0/lib/node_modules/node-red/node_modules/publish-please
 #     > node lib/pre-install.js
@@ -563,6 +592,17 @@ function Do_Install_NodeRed()
  
    if [[ ! -e /steady/neeo-custom/.node-red/node_modules/node-red/red.js ]]
       then 
+ 
+      echo ""
+      echo ""
+      echo "This tsk will run and multiple ways to install are attempted"
+      echo "    Therefore you WILL see errors, IGNORE ˜THEM!"
+      echo "     Check last statements, should be:"
+      echo "        + node-red@1.2.6"
+      echo "        added 316 packages from 284 contributors"
+      echo ""
+      echo ""       
+
       pushd . >/dev/null
       mkdir /steady/neeo-custom/.node-red
       cd /steady/neeo-custom/.node-red
@@ -713,16 +753,19 @@ function Do_install_broadlink()
       return      #nothing to do
    fi
 
+   pushd . >/dev/null
    if [[ ! -e /steady/neeo-custom/.broadlink ]]
       then 
-      pushd . >/dev/null
       cd /steady/neeo-custom
       if [[ ! -e ".broadlink" ]]
          then
          mkdir .broadlink
       fi
       cd .broadlink
+   fi
 
+   if [[ ! -e /steady/neeo-custom/.broadlink/python-broadlink/setup.py ]]
+      then
       git clone https://github.com/mjg59/python-broadlink
       if [ "$?" -ne 0 ]
          then
@@ -731,16 +774,19 @@ function Do_install_broadlink()
             GoOn=0
             return
       fi
-      sudo python python-broadlink/setup.py install
-      if [ "$?" -ne 0 ]
-         then
-         popd >/dev/null
-         echo 'Error occured during Install of broadlink support'
-         GoOn=0
-         return
-      fi
+   fi 
+
+   # next step will Always install broadlink driver, even if it is there already... just too much uncertainty where to check if it is already installed  
+   cd /steady/neeo-custom/.broadlink 
+   sudo python python-broadlink/setup.py install
+   if [ "$?" -ne 0 ]
+      then
       popd >/dev/null
+      echo 'Error occured during Install of broadlink support'
+      GoOn=0
+      return
    fi
+   popd >/dev/null
 
    Do_SetNextStage $NextStep
 }
@@ -845,24 +891,22 @@ function Do_Upgrade()
   
    if [ "$FoundStage" != "Z" ]  # Yes, but did we already have a completely installed system?
       then
-      echo "Please let installer run first to a succesful end before upgrading: $FoundStage"
+      echo "Please let installer run first to a successful end before upgrading: $FoundStage"
       Upgrade_requested=0       # reset update-request to no
    else
       if [  "$UpgradeMetaOnly_requested" == "1" ]
             then 
             echo "We will be upgrading metadriver only; then we will restart metadriver"
             Do_SetNextStage "$Exec_install_meta"
-            Upgrade_requested=1       # reset update-request to no
-      else
+      else  
          if [ !  "$LatestVersion" \> "$InstalledVersion"  ]  # is the installed version lower than the latest availalbe version (My Version)?
             then
-            echo "No need to upgrade, you are already on the latest version ($LatestVersion)"
-            Upgrade_requested=0       # reset update-request to no
+            echo "You are already on the latest version ($LatestVersion), rerunning installation"
          else         
            echo "We will be upgrading this installation from v$InstalledVersion into v$LatestVersion"
-           Do_SetNextStage "$Exec_all_stages"
-         fi
-      fi
+         fi 
+         Do_SetNextStage "$Exec_all_stages"
+     fi
    fi
 
 
@@ -941,15 +985,17 @@ echo $InstalledVersion
 echo "We are running in stage $FoundStage of 9"
 
 # Do we need to run a special check first, before entering the state-machine?
-if [ "$Upgrade_requested" == "1" ]
-   then
+if [[ "$Upgrade_requested" == "1"  ||  "$FoundStage" == "Z" ]]
+    then
+      $Upgrade_requested = "1"
       Do_Upgrade                                    # Check if upgrade is possible/allowed
       if [ "$Upgrade_requested" != "1" ]              # Did Do_Upgrade function made a decision overriding update-request?
          then
+         echo "$Upgrade_requested"
          echo "Upgrade was rejected"
          return
       fi
-   fi 
+fi 
 
 
 
