@@ -23,11 +23,12 @@ Statedir="/steady/.installer"
 Statefile="$Statedir/state"
 FoundStage=0
 VersionFile="$Statedir/version"
-LatestVersion=1.5
+LatestVersion=1.6
 InstalledVersion=1.0  # assume that the first installer ran before.
 Upgrade_requested=0
 UpgradeMetaOnly_requested="0"
 GoOn=1                # the main loop controller
+Determine_versions=0
 RetryCountPacman=10   # becasue of the instability of some archlinux repositories, url-error 502 might occur
 
 #Following table maintains the version where a new or changed functionality was AddedOrChanged; used to check if we need to execute an upgrade for a function  
@@ -77,7 +78,8 @@ function no_ctrlc()
         echo "cntrl-C hit, please confirm with another cntrl-c."
     elif [[ $ctrlc_count == 2 ]]; then
         echo "That's it.  I quit."
-        exit
+        GoOn=0
+        return
     fi
 }
 
@@ -150,7 +152,8 @@ function Do_SetNextStage()
    if [ "$1" = "" ]
       then 
       echo "error in setting nextstage; input for nextstage is empty"
-      exit 12
+      GoOn=0
+      
    fi
     FoundStage="$1"
     echo "Stage $1" >> "$Statefile"
@@ -265,7 +268,7 @@ function SubFunction_Update_Pacman()
    	cd var/cache/pacman/pkg
    fi
 
-   sudo pacman -Su pacman --noconfirm --force    # use old style pacman command
+   sudo pacman -Su pacman --noconfirm     # use old style pacman command
 
    # and downgrade systemd-package 
    cd ~/safepackages/var/cache/pacman/pkg
@@ -300,7 +303,8 @@ function Do_Reset_Pacman()
    if [ "$?" -ne 0 ]
       then
       echo "Filling Pacman's repositories" 
-      sudo pacman -Sy   
+      sudo pacman 
+-Sy   
    fi
 
    pushd .  >/dev/null
@@ -416,12 +420,12 @@ function Do_Finish_NVM()
       Do_SetNextStage $NextStep
       return      #nothing to do
    fi
+    pushd .  >/dev/null
    MyNPM=$(npm -v)
    if [[ ! "$MyNPM" == "" ]]  
       then
       echo "NPM 6.14.9 was already installed, skipping" 
    else
-      pushd .  >/dev/null 
       cd /steady/neeo-custom/
       npm install npm -g  --no-fund
       if [ "$?" -ne 0 ]
@@ -777,8 +781,8 @@ function Do_install_broadlink()
    fi 
 
    # next step will Always install broadlink driver, even if it is there already... just too much uncertainty where to check if it is already installed  
-   cd /steady/neeo-custom/.broadlink 
-   sudo python python-broadlink/setup.py install
+   cd /steady/neeo-custom/.broadlink/python-broadlink 
+   sudo python setup.py install
    if [ "$?" -ne 0 ]
       then
       popd >/dev/null
@@ -791,15 +795,26 @@ function Do_install_broadlink()
    Do_SetNextStage $NextStep
 }
 
+function SubFunction_Remove_Old_PM2()
+{  
+#Xa
+   echo "Stage $Exec_setup_pm2: Removing older versions of PM2"
+
+# Remove old versions of PM2 that are setup to run as service
+
+   DelOldPM2=$(pm2 kill)          #Kill old pm2-process that runs as user neeo
+   DelOldPM2=$(sudo pm2 kill)     #Kill old pm2-process that might have been started by the user by mistake (sudo pm2 xxx)
+
+}
+
+
 function Do_Setup_PM2()
 {
 #X
-#sudo   /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /home/neeo
-#sudo systemctl stop neeo-pm2.service
-#sudo systemctl disable neeo-pm2.service
+
    echo "Stage $Exec_setup_pm2: Activating services in PM2"
    NextStep=$Exec_finish   
-    
+
    if [[  "$UpgradeMetaOnly_requested" == "1" ]]
       then 
          pm2 restart meta
@@ -807,64 +822,41 @@ function Do_Setup_PM2()
          return
    fi 
    
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_X_AddedOrChanged" ]]
-      then
-     if [[  -e "/steady/neeo-custom.pm2" ]] #old PM2 has bug, it runs everything as root, so remove old PM2
-        then
-        sudo pm2 stop all
-        sudo pm2 kill
-        sudo systemctl stop pm2-neeo.service
-        sudo systemctl disable pm2-neeo.service      
-        sudo chown -R neeo:wheel /steady/neeo-custom
-     fi
-   fi
-   
-
+   SubFunction_Remove_Old_PM2    # first run the remove "old-style PM2" function 
+         
    pushd . >/dev/null
    cd /steady/neeo-custom
    if [[ ! -e ".pm2neeo" ]]
        then
       mkdir .pm2neeo
+      MyRemoveOld=$(sudo rmdir -t /steady/neeo-custom/.pm2)        # remove directories that were used by older PM2-instances  
+      MyRemoveOld=$(sudo rmdir -t /steady/neeo-custom/pm2-meta)    $ same
    fi
 
-#   MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/.pm2neeo')   # add some usefull commands to .bashrc to make life easier
-#   if [ "$?" -ne 0 ]
-#       then
-#        echo 'sudo chmod 777 /steady/neeo-custom/.pm2neeo/pub.sock' >> ~/.bashrc
-#        echo 'sudo chmod 777 /steady/neeo-custom/.pm2neeo/rpc.sock'>> ~/.bashrc
-#   fi 
    pm2 startup
-   sleep 20s    #give pm2 time to update some files beofre starting the service
-   MyPM2=$(sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/)
-   . ~/.bashrc
 
-   MyPM2=$(pm2 list)
-   if [[ $(echo "$MyPM2" | grep -i 'mosquitto') == "" ]]
-       then
-       pm2 start mosquitto
-   else
-       pm2 restart mosquitto
-   fi   
+   MyPM2=$(sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/)
+
+   export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2 # make sure we can run the next pm2-commands under the correct PM2 (the one we just setuop) 
+
+   DelOldPM2=$(pm2 delete mosquitto)          #Kill old pm2-process that runs as user neeo
+   pm2 start mosquitto  -o "/dev/null" -e "/dev/null"
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding mosquitto-start to PM2"
    fi 
 
-   if [[ $(echo "$MyPM2" | grep -i 'node-red') == "" ]];
-      then 
-      cd /steady/neeo-custom/.node-red/node_modules/node-red
-      pm2 start node-red.js -f  --node-args='--max-old-space-size=128'
-   else 
-      pm2 restart node-red
-   fi
+   cd /steady/neeo-custom/.node-red/node_modules/node-red
+   DelOldPM2=$(pm2 delete node-red)          #Kill old pm2-process that runs as user neeo
+   pm2 start node-red.js  -o "/dev/null" -e "/dev/null"  --node-args='--max-old-space-size=128'
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding node-red-start to PM2"
    fi 
 
-
-   DelPM2Meta=$(pm2 delete meta)
-   pm2 start --name meta meta.js -- -A "{\"Brain\":\"localhost\",\"LogSeverity\":\"VERBOSE\",\"Components\":[\"meta\"]}"
+   cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
+   DelOldPM2=$(pm2 delete meta)          #Kill old pm2-process that runs as user neeo
+   pm2 start --name meta meta.js  -o "/dev/null" -e "/dev/null" -- -A "{\"Brain\":\"localhost\",\"LogSeverity\":\"VERBOSE\",\"Components\":[\"meta\"]}"
 
    if [[ "$?" != 0 ]]
       then 
@@ -913,151 +905,200 @@ function Do_Finish()
 echo "$LatestVersion:"+$(date +"%Y-%m-%d %T") >>$VersionFile
 echo "We are done installng, your installation is now at level v$LatestVersion"
 
+echo "*******************************************************************************************************"
+echo "*                                                                                                     *"
+echo "*                       !!!!!!!!!!!!!!!!! IMPORTANT!!!!!!!!!!!!!!!!!                                  *"
+echo "*                                                                                                     *"
+echo "*        To setup the correct user-profile, you MUST either:                                          *"
+echo "*        - execute this command: . ~/.bashrc                                                          *"
+echo "*     OR - exit this session and start it again                                                       *"
+echo "*                                                                                                     *"
+echo "*                                                                                                     *"
+echo "*                                                                                                     *"
+echo "*                                                                                                     *"
+echo "*******************************************************************************************************"
+
+
 }
+
+function    Do_State_Machine()
+{
+   # We come here if we want the state machine to run.
+   # This may be for an entire run, a restarted run, or selected entries-only
+
+   while (( "$GoOn"==1 )); do
+   #    echo " case with $FoundStage"
+       case $FoundStage in
+          $Exec_mount_root_stage)
+             Do_Mount_root
+          ;;
+          $Exec_setup_steady_stage)
+             Do_Setup_steady_directory_struct
+          ;;
+          $Exec_reset_pacman)
+             Do_Reset_Pacman
+          ;;
+          $Exec_install_nvm)
+            Do_Install_NVM
+          ;;
+          $Exec_finish_nvm)
+            Do_Finish_NVM
+          ;;
+          $Exec_install_git)
+             Do_Install_Git
+          ;;
+          $Exec_install_meta)
+             Do_Install_Meta
+          ;;
+          $Exec_install_mosquitto)
+             Do_Install_Mosquitto
+          ;;
+          $Exec_install_nodered)
+             Do_Install_NodeRed
+          ;;
+          $Exec_backup_solution)
+             Do_Backup_solution
+          ;;
+          $Exec_install_jq)
+             Do_install_jq
+          ;;
+          $Exec_install_python)
+             Do_install_python
+          ;;
+          $Exec_install_broadlink)
+             Do_install_broadlink
+          ;;
+          $Exec_setup_pm2)
+             Do_Setup_PM2
+          ;;
+          $Exec_backup_solution)
+             Do_Backup_solution
+          ;;
+          $Exec_finish)                                          # this is just a placeholder
+             Do_SetNextStage $Exec_finish_done    # If we've come here, FoundStage can be set to the max position: Z
+          ;;
+          $Exec_finish_done)
+             Do_Finish
+             GoOn=0
+          ;;
+          *)
+             echo -n "Package already ran till end"
+             GoOn=0
+          ;;
+       esac
+   echo ""
+   done
+ 
+}
+
+
+function RunMain()
+{
+   # Special functions go first.
+
+   # This one just determines the current version of meta and the latest available one
+   if [ "$Determine_versions" == "1" ]
+      then
+         Do_Version_Check                              # Check if upgrade is possible/allowed
+         return
+      fi
+
+   GoOn=1
+   Do_ReadState                   # check to see if we ran before; if so, get the state of the previous runs and the version of installer thatran
+   echo $InstalledVersion
+
+   echo "We are running in stage $FoundStage of $Exec_finish_done"
+
+   # Do we need to run a special check first, before entering the state-machine?
+   if [[ "$Upgrade_requested" == "1"  ||  "$FoundStage" == "Z" ]]
+       then
+         Upgrade_requested="1"
+         Do_Upgrade                                    # Check if upgrade is possible/allowed
+         if [ "$Upgrade_requested" != "1" ]              # Did Do_Upgrade function made a decision overriding update-request?
+            then
+            echo "$Upgrade_requested"
+            echo "Upgrade was rejected"
+            return
+         fi
+   fi  
+         
+   Do_State_Machine
+
+}
+function Check_Call_Level()
+{
+  if [[ $SHLVL -lt 2 ]]
+     then
+     echo ""
+     echo ""
+     echo ""   
+     echo "This installer needs to be started without the '.'but with 'sh'  in front of the installmeta.sh"
+     echo "   please run sh installerneta.sh"
+     echo ""
+     echo ""
+     echo ""
+     GoOn=0
+  fi
+}
+
 
 ##Main routine
 
 # first setup a cntrol-C handler
 trap no_ctrlc SIGINT
-Determine_versions=0
-if [ $# -gt 0 ]; then
-  # Parsing any parameters passed to us
-  while (( "$#" )); do
-    case "$1" in
+
+  GoOn=1
+
+  if [ $# -gt 0 ]; then
+    # Parsing any parameters passed to us
+    while (( "$#" )); do
+      case "$1" in
       --help)
-        usage && return
-        shift
+        usage
+        GoOn=0
         ;;
       --reset)
         Do_Reset
-        shift
         ;;
       --meta-only)
         Upgrade_requested=1
         UpgradeMetaOnly_requested="1"
-        shift
-        ;; 
+        ;;
       --upgrade)
         Upgrade_requested=1
-        shift
-        ;;   
-     --get-versions)   
+        ;;
+      --get-versions)
         Determine_versions=1
-        shift
         ;;
       -*|--*=) # unsupported flags
         echo ""
-        echo "" 
+        echo ""
         echo ""
         echo "Error: Unsupported flag $1" >&2
         echo ""
         echo ""
         echo ""
         usage
-        return
+        GoOn=0
         ;;
       *)
         echo "Please use correct format for arguments $1 not recognised" >&2
-        usage &&return
-        ;; 
-    esac
-  done
-fi
+        usage
+        GoOn=0
+        ;;
+      esac
+      shift
+    done
+  fi
 
+  Check_Call_Level
 
-# Special functions go first.
-    
-# This one just determines the current version of meta and the latest available one
-if [ "$Determine_versions" == "1" ]
-   then
-      Do_Version_Check                              # Check if upgrade is possible/allowed
-      return
-   fi
-
-GoOn=1
-Do_ReadState                   # check to see if we ran before; if so, get the state of the previous runs and the version of installer thatran
-echo $InstalledVersion
-
-echo "We are running in stage $FoundStage of $Exec_finish_done"
-
-# Do we need to run a special check first, before entering the state-machine?
-if [[ "$Upgrade_requested" == "1"  ||  "$FoundStage" == "Z" ]]
-    then
-      Upgrade_requested="1"
-      Do_Upgrade                                    # Check if upgrade is possible/allowed
-      if [ "$Upgrade_requested" != "1" ]              # Did Do_Upgrade function made a decision overriding update-request?
-         then
-         echo "$Upgrade_requested"
-         echo "Upgrade was rejected"
-         return
-      fi
-fi 
+  if [[ "$GoOn" == "1" ]]
+     then 
+      echo "Starting State machine that will orchestrate installaton actions"
+     RunMain 
+  fi
+  
 
 
 
-# We come here if we want the stste machine to run. 
-# This may be for an entire run, a restarted run, or selected entries-only
-
-while (( "$GoOn"==1 )); do
-#    echo " case with $FoundStage"
-    case $FoundStage in
-       $Exec_mount_root_stage)
-          Do_Mount_root
-       ;;
-       $Exec_setup_steady_stage)
-          Do_Setup_steady_directory_struct
-       ;;
-       $Exec_reset_pacman)
-          Do_Reset_Pacman
-       ;;
-       $Exec_install_nvm)
-         Do_Install_NVM
-       ;;
-       $Exec_finish_nvm)
-         Do_Finish_NVM
-       ;;
-       $Exec_install_git)
-          Do_Install_Git 
-       ;;
-       $Exec_install_meta)
-          Do_Install_Meta 
-       ;;
-       $Exec_install_mosquitto)
-          Do_Install_Mosquitto
-       ;;
-       $Exec_install_nodered)
-          Do_Install_NodeRed
-       ;;
-       $Exec_backup_solution)
-          Do_Backup_solution
-       ;;
-       $Exec_install_jq)
-          Do_install_jq
-       ;;
-       $Exec_install_python)
-          Do_install_python
-       ;;
-       $Exec_install_broadlink)
-          Do_install_broadlink
-       ;;
-       $Exec_setup_pm2)
-          Do_Setup_PM2
-       ;;
-       $Exec_backup_solution)
-          Do_Backup_solution
-       ;;
-       $Exec_finish)                                          # this is just a placeholder
-          Do_SetNextStage $Exec_finish_done    # If we've come here, FoundStage can be set to the max position: Z
-       ;;  
-       $Exec_finish_done)
-          Do_Finish
-          GoOn=0
-       ;;       
-       *)
-          echo -n "Package already ran till end"
-          GoOn=0
-       ;;
-    esac
-
-echo ""  
-done
