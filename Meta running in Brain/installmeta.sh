@@ -252,7 +252,7 @@ function SubFunction_Update_Pacman()
    fi
 
    sudo pacman -Su pacman --noconfirm --force     # use old style pacman command
-   if [[ ! "$0" == 0 ]]
+   if [[ ! "$?" == 0 ]]
        then 
        echo "Problems updating the system, run aborted"
        exit  
@@ -261,7 +261,7 @@ function SubFunction_Update_Pacman()
    cd ~/safepackages
    sudo pacman -U systemd*  --noconfirm --overwrite '/*' # will give: warning: downgrading package systemd-libs (247.2-1 => 246.6-1.1)
 # and as we found out, the package  systemd-libs (247.2-1 causes problems with HTTP(S) not resolving anymore, so let's install an earlier version of it (downgrade it) 
-   cd ~/safepackages/var/cache/pacman/pkg
+
    cd ~
    rm -r ~/safepackages
 
@@ -353,14 +353,14 @@ function Do_Install_NVM()
        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm'>> ~/.bashrc
    fi
    . ~/.bashrc   
-   export NVM_DIR="$HOME/.nvm"
-   cd ~/.nvm
+   export NVM_DIR="$HOME/.nvm" 
+   cd ~/.nvm 
    MyNode=$(node -v)
    if [[ $MyNode == "v12.20.0" ]]
       then
       echo "Node is already installed"
    else
-      . ~/.nvm/nvm.sh
+      . ~/.nvm/nvm.sh 
       nvm install --lts=erbium
       if [ "$?" -ne 0 ]
          then
@@ -723,7 +723,7 @@ function Do_Setup_PM2()
          Do_SetNextStage $NextStep
          return
    fi 
-   
+   sudo chown -R neeo /steady/neeo-custom/.pm2neeo   
    SubFunction_Remove_Old_PM2    # first run the remove "old-style PM2" function 
          
    pushd . >/dev/null
