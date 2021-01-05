@@ -254,8 +254,12 @@ function SubFunction_Update_Pacman()
    	cd var/cache/pacman/pkg
    fi
 
-   sudo pacman -Su pacman --noconfirm     # use old style pacman command
-
+   sudo pacman -Su pacman --noconfirm --force     # use old style pacman command
+   if [[ ! "$0" == 0 ]]
+       then 
+       echo "Problems updating the system, run aborted"
+       exit  
+   fi
    # and downgrade systemd-package 
    cd ~/safepackages/var/cache/pacman/pkg
    sudo pacman -U systemd*  --noconfirm --overwrite '/*' # will give: warning: downgrading package systemd-libs (247.2-1 => 246.6-1.1)
