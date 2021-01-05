@@ -723,7 +723,7 @@ function Do_Setup_PM2()
          Do_SetNextStage $NextStep
          return
    fi 
-   sudo chown -R neeo /steady/neeo-custom/.pm2neeo   
+   sudo chown -R neeo /steady/neeo-custom/.pm2neeo 1>/dev/null 2>/dev/null  
    SubFunction_Remove_Old_PM2    # first run the remove "old-style PM2" function 
          
    pushd . >/dev/null
@@ -734,14 +734,15 @@ function Do_Setup_PM2()
       MyRemoveOld=$(sudo rmdir -R /steady/neeo-custom/.pm2)        # remove directories that were used by older PM2-instances  
       MyRemoveOld=$(sudo rmdir -R /steady/neeo-custom/pm2-meta)    $ same
    fi
-
+   
    pm2 startup
-
+   sudo chown -R neeo /steady/neeo-custom/.pm2neeo 1>/dev/null 2>/dev/null
    sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/ 2>/dev/null 1>/dev/null
 
    export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2 # make sure we can run the next pm2-commands under the correct PM2 (the one we just setuop) 
    pm2 delete mosquitto 2>/dev/null 1>/dev/null
-   pm2 start mosquitto  -o "/dev/null" -e "/dev/null"
+#   pm2 start mosquitto  -o "/dev/null" -e "/dev/null"  # we'll keep this one for later
+   pm2 start mosquitto
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding mosquitto-start to PM2"
@@ -751,7 +752,7 @@ function Do_Setup_PM2()
 
    cd /steady/neeo-custom/.node-red/node_modules/node-red
    pm2 delete node-red  2>/dev/null 1>/dev/null          #Kill old pm2-process that runs as user neeo
-   pm2 start node-red.js  -o "/dev/null" -e "/dev/null"  --node-args='--max-old-space-size=128'
+   pm2 start node-red.js   --node-args='--max-old-space-size=128'
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding node-red-start to PM2"
@@ -761,7 +762,7 @@ function Do_Setup_PM2()
 
    cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
    pm2 delete meta  2>/dev/null 1>/dev/null          #Kill old pm2-process that runs as user neeo
-   pm2 start --name meta meta.js  -o "/dev/null" -e "/dev/null" -- -A "{\"Brain\":\"localhost\",\"LogSeverity\":\"VERBOSE\",\"Components\":[\"meta\"]}"
+   pm2 start --name meta meta.js  -- -A "{\"Brain\":\"localhost\",\"LogSeverity\":\"VERBOSE\",\"Components\":[\"meta\"]}"
 
    if [[ "$?" != 0 ]]
       then 
