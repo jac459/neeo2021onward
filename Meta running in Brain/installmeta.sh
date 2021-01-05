@@ -92,7 +92,6 @@ Options:
   --help            display this help and exits
   --reset           Start installer from scratch)
   --meta-only       Only pull a new version of metadriver, and restart it
-  --upgrade         Upgrade environment to add/improve functionality
   --get-versions    Output current version of meta and the last available one
 EOL
 }
@@ -190,13 +189,6 @@ function Do_Mount_root()
    echo "Stage 0: Setup a rewritable root-partition (includes entry in /etc/fstab)"
    NextStep=$Exec_setup_steady_stage
 
-   if [ "$Upgrade_requested" == 1   ]
-      then 
-      echo "skip this step"
-      Do_SetNextStage $NextStep
-      return      #nothing to do
-   fi  
-
    MyMounts=$(mount|grep 'dev/mmcblk0p2 ')
    if [ $(echo "$MyMounts" | grep '(ro') ]
       then 
@@ -231,12 +223,6 @@ function Do_Setup_steady_directory_struct()
 #1  
    echo "Stage $Exec_setup_steady_stage: Setting up directories and rights"
    NextStep=$Exec_reset_pacman
-
-   if [ "$Upgrade_requested" == 1   ] 
-      then 
-      Do_SetNextStage $NextStep  
-      return      #nothing to do
-   fi
 
    if [ ! -e /steady/neeo-custom ]
       then   
@@ -287,25 +273,14 @@ function Do_Reset_Pacman()
    echo "Stage $Exec_reset_pacman: Restoring pacman to a workable state"
    NextStep=$Exec_install_nvm
 
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_2_AddedOrChanged" ]]
-      then 
-       Do_SetNextStage $NextStep
-      return      #nothing to do
-   fi
-
    MyYear=$(date +'%Y')   # Test to see if we have a corruoted date (timesyncd fails)
    if [[ "$MyYear" == "2018" ]]
       then                # we have the bug
       sudo date -s '2021-01-01 00:00:00'  # set a more recent date so that we do not have issues with certificates
    fi
 
-   MyPacman=$(sudo pacman -Q) # Are Pacman's package-databases already updated?
-   if [ "$?" -ne 0 ]
-      then
-      echo "Filling Pacman's repositories" 
-      sudo pacman 
--Sy   
-   fi
+   echo "Filling/updating Pacman's repositories" 
+   sudo pacman -Syy   
 
    pushd .  >/dev/null
 
@@ -360,19 +335,13 @@ function Do_Install_NVM()
    echo "Stage $Exec_install_nvm: installing NVM, then secondary npm&node"
    NextStep=$Exec_finish_nvm      
 
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_3_AddedOrChanged" ]]
-      then
-       Do_SetNextStage $NextStep
-      return      #nothing to do
+   if [ -e  ~/.nvm/nvm.sh ]
+      then 
+      echo "NVM already installed"
+   else   
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
+      sudo chmod -R ugo+rx /home/neeo/.nvm 
    fi
-
-      if [ -e  ~/.nvm/nvm.sh ]
-         then 
-         echo "NVM already installed"
-      else   
-         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
-         sudo chmod -R ugo+rx /home/neeo/.nvm 
-      fi
 
    MyBashrc=$(cat ~/.bashrc |grep 'export NVM_DIR="$HOME/.nvm')
    if [ "$?" -ne 0 ]
@@ -415,12 +384,7 @@ function Do_Finish_NVM()
    echo "Stage $Exec_finish_nvm: Finishing setup npm&node"
    NextStep=$Exec_install_git
        
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_4_AddedOrChanged" ]]
-      then
-      Do_SetNextStage $NextStep
-      return      #nothing to do
-   fi
-    pushd .  >/dev/null
+  pushd .  >/dev/null
    MyNPM=$(npm -v)
    if [[ ! "$MyNPM" == "" ]]  
       then
@@ -447,11 +411,6 @@ function Do_Install_Git()
    echo "Stage $Exec_install_git: installing GIT"
    NextStep=$Exec_install_meta     
 
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_5_AddedOrChanged" ]]
-      then
-      Do_SetNextStage $NextStep
-      return      #nothing to do
-   fi
    MyCommand=$(command -v git)
    if [[ "$MyCommand" == "" ]]
       then 
@@ -485,18 +444,15 @@ function Do_Install_Meta()
 {
 #6
    echo "Stage $Exec_install_meta: installing Metadriver (JAC459/metadriver)"
-   NextStep=$Exec_install_mosquitto     
-
-   if [[ ! "$UpgradeMetaOnly_requested" == "1" ]]
+      
+   if [[ "$UpgradeMetaOnly_requested" == "1" ]]
       then
-      if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_6_AddedOrChanged" ]]    
-          then
-          Do_SetNextStage $Exec_finish
-          return                                                           # in this case, upgrade will be requiresd
-      fi
+      NextStep=$Exec_setup_pm2
+   else
+      NextStep=$Exec_install_mosquitto     
    fi
-   pushd . >/dev/null 
 
+  pushd .  >/dev/null
    cd /steady/neeo-custom/ 
    if [[ ! -e  ".meta"  ]]
        then 
@@ -513,12 +469,6 @@ function Do_Install_Meta()
    fi
    popd >/dev/null 
 
-   if [[  "$UpgradeMetaOnly_requested" == "1" ]]
-      then
-      Do_SetNextStage $Exec_setup_pm2
-      return 
-   fi
-
    Do_SetNextStage $NextStep
 
 }
@@ -529,15 +479,9 @@ function Do_Install_Mosquitto()
    echo "Stage $Exec_install_mosquitto: installing Mosquitto"
    NextStep=$Exec_install_nodered      
 
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_7_AddedOrChanged" ]]
-      then
-      Do_SetNextStage $NextStep
-      return      #nothing to do
-   fi
    MyCommand=$(command -v mosquitto)
    if [[ "$MyCommand" == "" ]]
       then 
-#      sudo useradd -u 1002 mosquitto -m -d /home/mosquitto
       MyRetries=$RetryCountPacman
       NoSuccessYet=1
       while  [[  $NoSuccessYet -ne 0 ]] ; do
@@ -568,31 +512,7 @@ function Do_Install_NodeRed()
    echo "Stage $Exec_install_nodered: installing Node-Red"
    NextStep=$Exec_backup_solution
 
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_8_AddedOrChanged" ]]
-      then
-      Do_SetNextStage $NextStep
-      return      #nothing to do
-   fi
 
-   #sudo npm install -g --unsafe-perm node-red # since 2020-12-05, global install produces the following error :
-#        > publish-please@5.5.2 preinstall /home/neeo/.nvm/versions/node/v12.20.0/lib/node_modules/node-red/node_modules/publish-please
-#     > node lib/pre-install.js
-#
-#
-#     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#     !! Starting from v2.0.0 publish-please can't be installed globally.          !!
-#     !! Use local installation instead : 'npm install --save-dev publish-please', !!
-#     !! Or use npx if you do not want to install publish-please as a dependency.  !!
-#     !! (learn more: https://github.com/inikulin/publish-please#readme).          !!
-#     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#
-#     npm WARN optional SKIPPING OPTIONAL DEPENDENCY: fsevents@^2.1.2 (node_modules/node-red/node_modules/jest-haste-map/node_modules/fsevents):
-#     npm WARN notsup SKIPPING OPTIONAL DEPENDENCY: Unsupported platform for fsevents@2.2.1: wanted {"os":"darwin","arch":"any"} (current: {"os":"linux","arch":"arm"})
-#
-#     npm ERR! code ELIFECYCLE
-#     npm ERR! errno 1
-#     npm ERR! publish-please@5.5.2 preinstall: `node lib/pre-install.js`
-#     npm ERR! Exit status 1
  
    if [[ ! -e /steady/neeo-custom/.node-red/node_modules/node-red/red.js ]]
       then 
@@ -632,11 +552,6 @@ function Do_Backup_solution()
    echo "Stage $Exec_backup_solution: Setting up backup"
    NextStep=$Exec_install_jq
 
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_9_AddedOrChanged" ]]
-      then
-      Do_SetNextStage $NextStep
-   fi
-
    MyCommand=$(command -v rsync)
    if [[ "$MyCommand" == "" ]]
       then 
@@ -669,12 +584,6 @@ function Do_install_jq()
 #A
    echo "Stage $Exec_install_jq : add jq package"
    NextStep=$Exec_install_python
-
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_A_AddedOrChanged" ]]
-      then
-      Do_SetNextStage $NextStep
-      return      #nothing to do
-   fi
 
    MyCommand=$(command -v jq)
    if [[ "$MyCommand" == "" ]]
@@ -711,12 +620,6 @@ function Do_install_python()
    echo "Stage $Exec_install_python : add python3 package"
    NextStep=$Exec_install_broadlink
 
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_B_AddedOrChanged" ]]
-      then
-      Do_SetNextStage $NextStep
-      return      #nothing to do
-   fi
-
    MyCommand=$(command -v python3)
    if [[ "$MyCommand" == "" ]]
       then
@@ -750,12 +653,6 @@ function Do_install_broadlink()
 #C
    echo "Stage $Exec_install_broadlink : add broadlink support"
    NextStep=$Exec_setup_pm2
-
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_C_AddedOrChanged" ]]
-      then
-      Do_SetNextStage $NextStep
-      return      #nothing to do
-   fi
 
    pushd . >/dev/null
    if [[ ! -e /steady/neeo-custom/.broadlink ]]
@@ -869,36 +766,6 @@ function Do_Setup_PM2()
    Do_SetNextStage $NextStep
 }
 
-function Do_Upgrade()
-{
-   if [[ ("$InstalledVersion"  = "1.0") && ("$FoundStage"="A") ]]        # fix the "old v1.0 Finish-action", so that is compatible with newer versions
-      then
-      FoundStage="Z"
-   fi
-
-  
-   if [ "$FoundStage" != "Z" ]  # Yes, but did we already have a completely installed system?
-      then
-      echo "Please let installer run first to a successful end before upgrading: $FoundStage"
-      Upgrade_requested=0       # reset update-request to no
-   else
-      if [[  "$UpgradeMetaOnly_requested" == "1" ]]
-            then 
-            echo "We will be upgrading metadriver only; then we will restart metadriver"
-            Do_SetNextStage "$Exec_install_meta"
-      else  
-         if [ !  "$LatestVersion" \> "$InstalledVersion"  ]  # is the installed version lower than the latest availalbe version (My Version)?
-            then
-            echo "You are already on the latest version ($LatestVersion), rerunning installation"
-         else         
-           echo "We will be upgrading this installation from v$InstalledVersion into v$LatestVersion"
-         fi 
-         Do_SetNextStage "$Exec_all_stages"
-     fi
-   fi
-
-
-}    
 
 function Do_Finish()
 {
@@ -991,10 +858,27 @@ function    Do_State_Machine()
  
 }
 
+function Do_Check_Last_Run()
+{ 
+# This routine determines if we will continue the previous incompolete run, or start all over again
+   if [[ ("$InstalledVersion"  = "1.0") && ("$FoundStage"="A") ]]        # fix the "old v1.0 Finish-action", so that is compatible with newer versions
+      then
+      FoundStage="Z"
+   fi
+
+   if [ "$FoundStage" != "Z" ]  # Yes, but did we already have a completely installed system?
+      then
+      echo "Installer was interupted last time it ran, continuing frpom that point"
+      echo "If you want to start this run from the start, plese add the --reset argument when starting this script"
+   else
+      FoundStage=$Exec_all_stages
+   fi
+
+}
 
 function RunMain()
 {
-   # Special functions go first.
+#This is the main routine, it handles the logic after init is done
 
    # This one just determines the current version of meta and the latest available one
    if [ "$Determine_versions" == "1" ]
@@ -1008,20 +892,8 @@ function RunMain()
    echo $InstalledVersion
 
    echo "We are running in stage $FoundStage of $Exec_finish_done"
+   Do_Check_Last_Run
 
-   # Do we need to run a special check first, before entering the state-machine?
-   if [[ "$Upgrade_requested" == "1"  ||  "$FoundStage" == "Z" ]]
-       then
-         Upgrade_requested="1"
-         Do_Upgrade                                    # Check if upgrade is possible/allowed
-         if [ "$Upgrade_requested" != "1" ]              # Did Do_Upgrade function made a decision overriding update-request?
-            then
-            echo "$Upgrade_requested"
-            echo "Upgrade was rejected"
-            return
-         fi
-   fi  
-         
    Do_State_Machine
 
 }
@@ -1063,9 +935,6 @@ trap no_ctrlc SIGINT
       --meta-only)
         Upgrade_requested=1
         UpgradeMetaOnly_requested="1"
-        ;;
-      --upgrade)
-        Upgrade_requested=1
         ;;
       --get-versions)
         Determine_versions=1
