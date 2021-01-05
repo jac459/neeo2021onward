@@ -283,7 +283,7 @@ function Do_Reset_Pacman()
    sudo pacman -Syy   
 
    pushd .  >/dev/null
-
+   MyPacman=$(sudo pacman --version) 
    if [[ ! "$MyPacman" == *"Pacman v5.0.2"* ]]; then 
       # pacman is higher than 5.0.2? (5.0.2. = neeo-supplied level)
       echo "Pacman is already at the correct level"
@@ -339,6 +339,7 @@ function Do_Install_NVM()
       then 
       echo "NVM already installed"
    else   
+      mkdir ~/.nvm 
       curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
       sudo chmod -R ugo+rx /home/neeo/.nvm 
    fi
