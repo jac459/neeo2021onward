@@ -704,8 +704,8 @@ function SubFunction_Remove_Old_PM2()
 
 # Remove old versions of PM2 that are setup to run as service
 
-   DelOldPM2=$(pm2 kill)          #Kill old pm2-process that runs as user neeo
-   DelOldPM2=$(sudo pm2 kill)     #Kill old pm2-process that might have been started by the user by mistake (sudo pm2 xxx)
+   pm2 kill 2>/dev/null 1>/dev/null          #Kill old pm2-process that runs as user neeo
+   sudo pm2 kill 2>/dev/null 1>/dev/null     #Kill old pm2-process that might have been started by the user by mistake (sudo pm2 xxx)
 
 }
 
@@ -737,32 +737,37 @@ function Do_Setup_PM2()
 
    pm2 startup
 
-   MyPM2=$(sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/)
+   sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/ 2>/dev/null 1>/dev/null
 
    export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2 # make sure we can run the next pm2-commands under the correct PM2 (the one we just setuop) 
-
-   DelOldPM2=$(pm2 delete mosquitto)          #Kill old pm2-process that runs as user neeo
+   pm2 delete mosquitto 2>/dev/null 1>/dev/null
    pm2 start mosquitto  -o "/dev/null" -e "/dev/null"
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding mosquitto-start to PM2"
+      GoOn=0
+      return
    fi 
 
    cd /steady/neeo-custom/.node-red/node_modules/node-red
-   DelOldPM2=$(pm2 delete node-red)          #Kill old pm2-process that runs as user neeo
+   pm2 delete node-red  2>/dev/null 1>/dev/null          #Kill old pm2-process that runs as user neeo
    pm2 start node-red.js  -o "/dev/null" -e "/dev/null"  --node-args='--max-old-space-size=128'
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding node-red-start to PM2"
+      GoOn=0
+      return      
    fi 
 
    cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
-   DelOldPM2=$(pm2 delete meta)          #Kill old pm2-process that runs as user neeo
+   pm2 delete meta  2>/dev/null 1>/dev/null          #Kill old pm2-process that runs as user neeo
    pm2 start --name meta meta.js  -o "/dev/null" -e "/dev/null" -- -A "{\"Brain\":\"localhost\",\"LogSeverity\":\"VERBOSE\",\"Components\":[\"meta\"]}"
 
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding meta-start to PM2"
+      GoOn=0
+      return
    fi
 
    popd >/dev/null
