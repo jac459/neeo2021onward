@@ -242,16 +242,13 @@ function SubFunction_Update_Pacman()
 
    # and as we found out, the package  systemd-libs (247.2-1 causes problems with HTTP(S) not resolving anymore, so let's install an earlier version of it (downgrade it) 
    pushd .  >/dev/null
-   if [[ -e ~/safepackages/var/cache/pacman/pkg/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz ]]
+   if [[ -e ~/safepackages/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz ]]
       then
-      echo "Saved package(s) already downloaded"
+      echo "Saved package already downloaded"
    else
-      curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/safepackages.tgz' -o ~/safepackages.tgz 
       mkdir ~/safepackages
    	cd ~/safepackages
-   	tar -xvf ~/safepackages.tgz
-   	rm ~/safepackages.tgz
-   	cd var/cache/pacman/pkg
+      curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz' -o systemd-libs-246.6-1.1-armv7h.pkg.tar.xz
    fi
 
    sudo pacman -Su pacman --noconfirm --force     # use old style pacman command
@@ -261,7 +258,7 @@ function SubFunction_Update_Pacman()
        exit  
    fi
    # and downgrade systemd-package 
-   cd ~/safepackages/var/cache/pacman/pkg
+   cd ~/safepackages
    sudo pacman -U systemd*  --noconfirm --overwrite '/*' # will give: warning: downgrading package systemd-libs (247.2-1 => 246.6-1.1)
 # and as we found out, the package  systemd-libs (247.2-1 causes problems with HTTP(S) not resolving anymore, so let's install an earlier version of it (downgrade it) 
    cd ~/safepackages/var/cache/pacman/pkg
