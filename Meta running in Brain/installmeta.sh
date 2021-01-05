@@ -866,7 +866,7 @@ function    Do_State_Machine()
 function Do_Check_Last_Run()
 { 
 # This routine determines if we will continue the previous incompolete run, or start all over again
-   if [[ ("$InstalledVersion"  = "1.0") && ("$FoundStage"="A") ]]        # fix the "old v1.0 Finish-action", so that is compatible with newer versions
+   if [[ ("$InstalledVersion"  == "1.0") && ("$FoundStage" == "A") ]]        # fix the "old v1.0 Finish-action", so that is compatible with newer versions
       then
       FoundStage="Z"
    fi
