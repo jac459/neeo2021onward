@@ -336,6 +336,7 @@ function Do_Install_NVM()
    echo "Stage $Exec_install_nvm: installing NVM, then secondary npm&node"
    NextStep=$Exec_finish_nvm      
 
+   pushd .  >/dev/null
    if [ -e  ~/.nvm/nvm.sh ]
       then 
       echo "NVM already installed"
@@ -352,12 +353,14 @@ function Do_Install_NVM()
        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm'>> ~/.bashrc
    fi
    . ~/.bashrc   
-
+   export NVM_DIR="$HOME/.nvm"
+   cd ~/.nvm
    MyNode=$(node -v)
    if [[ $MyNode == "v12.20.0" ]]
       then
       echo "Node is already installed"
    else
+      . ~/.nvm/nvm.sh
       nvm install --lts=erbium
       if [ "$?" -ne 0 ]
          then
@@ -728,8 +731,8 @@ function Do_Setup_PM2()
    if [[ ! -e ".pm2neeo" ]]
        then
       mkdir .pm2neeo
-      MyRemoveOld=$(sudo rmdir -t /steady/neeo-custom/.pm2)        # remove directories that were used by older PM2-instances  
-      MyRemoveOld=$(sudo rmdir -t /steady/neeo-custom/pm2-meta)    $ same
+      MyRemoveOld=$(sudo rmdir -r /steady/neeo-custom/.pm2)        # remove directories that were used by older PM2-instances  
+      MyRemoveOld=$(sudo rmdir -r /steady/neeo-custom/pm2-meta)    $ same
    fi
 
    pm2 startup
