@@ -242,7 +242,7 @@ function SubFunction_Update_Pacman()
 
    # and as we found out, the package  systemd-libs (247.2-1 causes problems with HTTP(S) not resolving anymore, so let's install an earlier version of it (downgrade it) 
    pushd .  >/dev/null
-   if [ -e ~/safepackages/var/cache/pacman/pkg/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz ]
+   if [[ -e ~/safepackages/var/cache/pacman/pkg/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz ]]
       then
       echo "Saved package(s) already downloaded"
    else
