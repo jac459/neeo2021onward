@@ -112,13 +112,13 @@ function Do_ReadState()
       then 
       if [ ! -e "$Statefile"  ]  # yes, do we alsoi have the state file in there?
          then                                # no
-         echo "Stage 0" > "$Statefile"       # create an empty stage-file
+         echo "Stage Z" > "$Statefile"       # create an empty stage-file
       fi 
       sudo chown neeo:wheel "$Statedir"      # make sure normal user can access the directory
   else
       sudo mkdir "$Statedir"                 # No state-0directory found, make it so we can save our state
       sudo chown neeo:wheel "$Statedir"      # make sure normal user can access the directory
-      echo "Stage 0" > "$Statefile"          # and create an empty file 
+      echo "Stage Z" > "$Statefile"          # and create an empty file 
       #FoundStage="0"  no longer needed                        # tell the installer we start from scratch
   fi
   LastLine=$(tail -n 1 "$Statefile")
@@ -731,13 +731,14 @@ function Do_Setup_PM2()
    if [[ ! -e ".pm2neeo" ]]
        then
       mkdir .pm2neeo
-      MyRemoveOld=$(sudo rmdir -R /steady/neeo-custom/.pm2)        # remove directories that were used by older PM2-instances  
-      MyRemoveOld=$(sudo rmdir -R /steady/neeo-custom/pm2-meta)    $ same
+      MyRemoveOld=$(sudo rm -r /steady/neeo-custom/.pm2)        # remove directories that were used by older PM2-instances  
+      MyRemoveOld=$(sudo rm -r /steady/neeo-custom/pm2-meta)    $ same
    fi
    
    pm2 startup
    sudo chown -R neeo /steady/neeo-custom/.pm2neeo 1>/dev/null 2>/dev/null
    sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/ 2>/dev/null 1>/dev/null
+   sudo chown -R neeo /steady/neeo-custom/.pm2neeo 1>/dev/null 2>/dev/null
 
    export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2 # make sure we can run the next pm2-commands under the correct PM2 (the one we just setuop) 
    pm2 delete mosquitto 2>/dev/null 1>/dev/null
@@ -762,7 +763,7 @@ function Do_Setup_PM2()
 
    cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
    pm2 delete meta  2>/dev/null 1>/dev/null          #Kill old pm2-process that runs as user neeo
-   pm2 start --name meta meta.js  --  "{\"Brain\":\"localhost\",\"LogSeverity\":\"VERBOSE\",\"Components\":[\"meta\"]}"
+   pm2 start --name meta meta.js  --  '{"Brain":"localhost","LogSeverity":"VERBOSE","Components":["meta"]}'
 
    if [[ "$?" != 0 ]]
       then 
@@ -880,7 +881,7 @@ function Do_Check_Last_Run()
    if [ "$FoundStage" != "Z" ]  # Yes, but did we already have a completely installed system?
       then
       echo "Installer was interupted last time it ran, continuing frpom that point"
-      echo "If you want to start this run from the start, plese add the --reset argument when starting this script"
+      echo "If you want to start this run from the start, pleas`e add the --reset argument when starting this script"
    else
       FoundStage=$Exec_all_stages
    fi
