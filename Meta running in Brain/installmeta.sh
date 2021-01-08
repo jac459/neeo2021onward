@@ -880,8 +880,8 @@ function Do_Check_Last_Run()
 
    if [ "$FoundStage" != "Z" ]  # Yes, but did we already have a completely installed system?
       then
-      echo "Installer was interupted last time it ran, continuing frpom that point"
-      echo "If you want to start this run from the start, pleas`e add the --reset argument when starting this script"
+      echo "Installer was interupted last time it ran, continuing from that point"
+      echo "If you want to start this run from the start, please add the --reset argument when starting this script"
    else
       FoundStage=$Exec_all_stages
    fi
