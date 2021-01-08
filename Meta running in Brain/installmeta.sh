@@ -27,7 +27,7 @@ function RunMain()
 #  Its main purpose is to load the actual backend-code and run it. 
 
    pushd . >/dev/null
-   MyURL="https://raw.githubusercontent.com/jac459/neeo2021onward/Beta-2021-01#2/Meta running in Brain/installmeta-Backend.sh"
+   MyURL="https://raw.githubusercontent.com/jac459/neeo2021onward/Beta-2021-01%232/Meta%20running%20in%20Brain/installmeta-Backend.sh"
    sudo rm -r ~/installmeta-Backend.sh
    MyCurl=$(curl $MyURL -s -k -o ~/installmeta-Backend.sh)
    if [ "$?" -ne 0 ]
