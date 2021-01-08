@@ -955,7 +955,7 @@ trap no_ctrlc SIGINT
         echo ""
         echo ""
         echo ""
-        echo "Error: Unsupported flag $1" >&2
+        echo "Error: Unsupported flag $1" 
         echo ""
         echo ""
         echo ""
@@ -963,7 +963,7 @@ trap no_ctrlc SIGINT
         GoOn=0
         ;;
       *)
-        echo "Please use correct format for arguments $1 not recognised" >&2
+        echo "Please use correct format for arguments, $1 is not recognised" 
         usage
         GoOn=0
         ;;
@@ -979,7 +979,3 @@ trap no_ctrlc SIGINT
       echo "Starting State machine that will orchestrate installaton actions"
      RunMain 
   fi
-  
-
-
-
