@@ -60,11 +60,17 @@ function Check_Call_Level()
 ##Main routine
 
 Check_Call_Level
-if [[ "$GoOn" != "1" ]] then exit
+if [[ ! "$GoOn" == "1" ]] 
+   then 
+   exit
+fi 
 
 Do_Mount_root
 
-if [[ "$GoOn" != "1" ]] then exit   
+if [[ ! "$GoOn" == "1" ]] 
+   then 
+   exit
+fi   
 
 RunMain 
 
