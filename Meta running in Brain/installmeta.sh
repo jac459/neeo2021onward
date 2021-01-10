@@ -50,8 +50,8 @@ function RunMain()
 function Check_elevated_rights
 {
     
-    MyUsername = $USER
-    if [ "$MyUsername" =="root" ]]
+    MyUsername=$USER
+    if [[ "$MyUsername" ==  "root" ]]
       then
        echo "please call this program with normal rights (do not use sudo or su)"
        GoOn=0 
@@ -81,8 +81,10 @@ MyPath=$0
 MyExecutable=$BASH_SOURCE   # save the name and location of this script, we might need to copy script later
 Check_Call_Level
 if [[  "$GoOn" == "1" ]] 
+   then
    Check_elevated_rights
-   if [[  "$GoOn" == "1" ]] 
+   if [[  "$GoOn" == "1" ]]
+      then 
       Do_Mount_root
       if [[  "$GoOn" == "1" ]] 
       then 
