@@ -57,6 +57,7 @@ function Check_elevated_rights
        GoOn=0 
    fi                             
 }
+
 function Check_Call_Level()
 {
   if [[ $SHLVL -lt 2 ]]
