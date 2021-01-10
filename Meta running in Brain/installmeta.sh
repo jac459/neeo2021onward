@@ -52,7 +52,7 @@ function Check_elevated_rights
     
     MyUsername = $USER
     if [ "$MyUsername" =="root" ]]
-       print("please call this program with normal rights (do not use sudo or su)")
+       echo "please call this program with normal rights (do not use sudo or su)"
        GoOn=0                              
 }
 function Check_Call_Level()
