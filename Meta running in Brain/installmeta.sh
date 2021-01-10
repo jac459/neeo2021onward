@@ -27,6 +27,11 @@ function RunMain()
 #  Its main purpose is to load the actual backend-code and run it. 
 
    pushd . >/dev/null
+   if [[ "$MyPath"  != "$HOME" ]]    # Is this script already located in home directory?
+      then                           # no, we need to copy it to our home-directory for later use
+      scp $BASH_SOURCE ~
+   fi
+
    MyURL="https://raw.githubusercontent.com/jac459/neeo2021onward/Beta-2021-01%232/Meta%20running%20in%20Brain/installmeta-Backend.sh"
    sudo rm -r ~/installmeta-Backend.sh
    MyCurl=$(curl $MyURL -s -k -o ~/installmeta-Backend.sh)
@@ -37,8 +42,18 @@ function RunMain()
       return  
    fi    
 
+   cp installmeta.sh ~
    . ~/installmeta-Backend.sh
    sudo rm -r ~/installmeta-Backend.sh
+}
+
+function Check_elevated_rights
+{
+    
+    MyUsername = $USER
+    if [ "$MyUsername" =="root" ]]
+       print("please call this program with normal rights (do not use sudo or su)")
+       GoOn=0                              
 }
 function Check_Call_Level()
 {
@@ -59,20 +74,20 @@ function Check_Call_Level()
 
 ##Main routine
 
+MyPath=$0
+MyExecutable=$BASH_SOURCE   # save the name and location of this script, we might need to copy script later
 Check_Call_Level
-if [[ ! "$GoOn" == "1" ]] 
-   then 
-   exit
-fi 
+if [[  "$GoOn" == "1" ]] 
+   Check_elevated_rights
+   if [[  "$GoOn" == "1" ]] 
+      Do_Mount_root
+      if [[  "$GoOn" == "1" ]] 
+      then 
+         RunMain
+      fi
+   fi
+fi
 
-Do_Mount_root
-
-if [[ ! "$GoOn" == "1" ]] 
-   then 
-   exit
-fi   
-
-RunMain 
 
 
 
