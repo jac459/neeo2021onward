@@ -1,879 +1,103 @@
 #!/bin/bash
 #
-# Meta Installer for NEEO-Brain
+# Driver script for Meta Installer NEEO-Brain
 #
-# This script runs as a kind of state-machine with the follwoing states:
-#  1; Initial   - This is the initial invocation of the script
-#     Should only be run on freshly installed neeo Brain-systems. This means a new Brain, or one that has been reset to factory settings 
-#     This phase HAS to run once!
-#     This phase is finished with a reboot while setting the phase, followed by a reboot. 
-#  2; Started, valid input argument received, mounted root-fs rw and now restoring pacman
-#  3; Started,pacman done; now installing nvm 
-#  4; Rebooting 
-#  5; Directly after the reboot, installer restarted
-#  6; Setting up user-envir for PM2, installing npm and meta
-#  7; Installing mosquitto and nodered
-#  8; Adding users (mosquitto, changing profile for neeo-user to chmod /steady/neeo-custom/.pm2/pub.sock & /steady/neeo-custom/.pm2/rpc.sock to 777
-#  9; Setting up autopstart via PM2
-#  9; Signalling we have run seuccesfully  
-
-
-# First, define some variables used in here
-Statedir="/steady/.installer"
-Statefile="$Statedir/state"
-FoundStage=0
-VersionFile="$Statedir/version"
-LatestVersion=1.3
-InstalledVersion=1.0  # assume that the first installer ran before.
-Upgrade_requested=0
-UpgradeMetaOnly_requested="0"
 GoOn=1                # the main loop controller
-RetryCountPacman=10   # becasue of the instability of some archlinux repositories, url-error 502 might occur
 
-#Following table maintains the version where a new or changed functionality was introduced; used to check if we need to execute an upgrade for a function  
-Function_0_Introduced=1.0
-Function_1_Introduced=1.0
-Function_2_Introduced=1.0
-Function_3_Introduced=1.0
-Function_4_Introduced=1.0
-Function_5_Introduced=1.0
-Function_6_Introduced=1.0
-Function_7_Introduced=1.0
-Function_8_Introduced=1.0
-Function_9_Introduced=1.0
-Function_A_Introduced=1.3
-Function_B_Introduced=1.3 
-Function_X_Introduced=1.2
-
-# Following are the various stages that can be executed
-Exec_mount_root_stage=0
-Exec_setup_steady_stage=1
-Exec_reset_pacman=2
-Exec_install_nvm=3
-Exec_finish_nvm=4
-Exec_install_git=5
-Exec_install_meta=6
-Exec_install_mosquitto=7
-Exec_install_nodered=8
-Exec_backup_solution=9 
-Exec_install_jq=A
-Exec_setup_pm2=X 
-Exec_all_stages=0
-Exec_finish=Y 
-Exec_finish_done=Z
-
-# then define all functions that we are going to use.
-
-ctrlc_count=0
-
-function no_ctrlc()
-{
-    let ctrlc_count++
-    echo
-    if [[ $ctrlc_count == 1 ]]; then
-        echo "cntrl-C hit, please confirm with another cntrl-c."
-    elif [[ $ctrlc_count == 2 ]]; then
-        echo "That's it.  I quit."
-        exit
-    fi
-}
-
-function usage() {
-  cat << EOL
-Installer for NEEO-Brain v$MyVersion 
-Usage: $0 [options]
-
-Options: 
-  --help            display this help and exits
-  --reset           Start installer from scratch)
-  --meta-only       Only pull a new version of metadriver, and restart it
-  --upgrade         Upgrade environment to add/improve functionality
-  --get-versions    Output current version of meta and the last available one
-EOL
-}
-
-function Do_Reset()
-{
-echo "Clearing statemachine, restarting from begin... you may get errors about packages already being installed..."
-if [ -e "$Statedir" ]
-    then 
-    sudo rm -r "$Statedir" 
-    fi 
-
-}
-
-function Do_ReadState()
-{
-  if [ -e "$Statedir"  ];                   # do we have the state-directory in /steady?
-      then 
-      if [ ! -e "$Statefile"  ]  # yes, do we alsoi have the state file in there?
-         then                                # no
-         echo "Stage 0" > "$Statefile"       # create an empty stage-file
-      fi 
-      sudo chown neeo:wheel "$Statedir"      # make sure normal user can access the directory
-  else
-      sudo mkdir "$Statedir"                 # No state-0directory found, make it so we can save our state
-      sudo chown neeo:wheel "$Statedir"      # make sure normal user can access the directory
-      echo "Stage 0" > "$Statefile"          # and create an empty file 
-      #FoundStage="0"  no longer needed                        # tell the installer we start from scratch
-  fi
-  LastLine=$(tail -n 1 "$Statefile")
-  if [ "$LastLine" != "" ] 
-     then
-     StageID=$(echo "$LastLine" | cut -c1-6) 
-     if [ "$StageID" = "Stage " ]
-         then 
-         FoundStage=$(echo "$LastLine" | cut -c7-8) 
-     else
-         echo "Found $StageID but that doesn't match 'Stage '; so $FoundStage isn't valid either"
-         GoOn=0
-     fi
-  else
-     FoundStage=0 			  # file with state found, but with no content; assume it's not there and start at stage 0
-  fi
-
-  if [ -e "$VersionFile" ]                 # Now find out which version of the installer ran (will be in /steady/.install/version unless user removed it / never ran it
-      then                                 # file is available,m look at last succesful installation to obtain that version 
-      LastLine=$(tail -n 1 "$VersionFile")
-      if [ ! "$LastLine" = "" ] 
-         then
-	      InstalledVersion=`echo $LastLine | cut -d ":" -f 1`    # format of line is 1.0:+2020-12-05 16:27:09
-      fi
-  fi
-}
-
-function Do_SetNextStage()
-{
-   if [ "$1" = "" ]
-      then 
-      echo "error in setting nextstage; input for nextstage is empty"
-      exit 12
-   fi
-    FoundStage="$1"
-    echo "Stage $1" >> "$Statefile"
-    echo "$FoundStage"
-}
-
-Do_Version_Check()
-{
-#Special_1
-
-   if [[ ! -e  "/steady/neeo-custom/.meta"  ]]
-       then 
-       echo "Error: Metadriver is not yet installed"
-       return 
-   fi
-
-   pushd . 1>/dev/null
-
-   cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
-   MyVersion=$(cat package.json | jq ._id|xargs | cut -d @ -f3) 
-   popd  >/dev/null
-
-   MyPKG=$(curl https://raw.githubusercontent.com/jac459/metadriver/master/package.json -s)
-   LastVersion=$(echo $MyPKG | jq ._id|xargs | cut -d @ -f3)
-
-   export InfoString="Last version: $LastVersion -  Installed version: $MyVersion"
-   echo $InfoString
-   
-   return
-}
 function Do_Mount_root()
 {
-#0
-   echo "Stage 0: Setup a rewritable root-partition (includes entry in /etc/fstab)"
-
-   if [ "$Upgrade_requested" == 1   ]
-      then 
-      echo "skip this step"
-      Do_SetNextStage $Exec_setup_steady_stage
-      return      #nothing to do
-   fi  
-
+   # This function makes sure that we have a root-filesystem that is writable, as we're going to need it for sure.
    MyMounts=$(mount|grep 'dev/mmcblk0p2 ')
-   if [ $(echo "$MyMounts" | grep '(ro') ]
+   if [[ $(echo "$MyMounts" | grep '(ro') ]]
       then 
-      echo "/ is still ro"
+      echo "/ is still ro, remounting it rw"
       sudo mount -o remount,rw /
       if [ "$?" -ne 0 ]
          then
-         echo "The script failed" >&2
+         echo "The script failed" 
          GoOn=0
          return  
       fi
    fi
-   MyFstab=$(grep 'dev/mmcblk0p2  /       ext2    ro         ' /etc/fstab)
-   if [ "$MyFstab" ]                                                        # Do we still have the root as ro-only in fstab?  
-      then
-      sudo sed -i 's_dev/mmcblk0p2  /       ext2    ro         _dev/mmcblk0p2  /       ext2    rw,noatime_' /etc/fstab
-       if [ "$?" -ne 0 ]
-         then
-           echo "Coud not update fstab" >&2
-           GoOn=0
-           return
-        fi
-       echo "/etc/fstab is now patched, continuing"
-    else
-       echo "/etc/fstab was already patched, so it seems, continuing"
-    fi
-    Do_SetNextStage $Exec_setup_steady_stage
 } 
 
-function Do_Setup_steady_directory_struct()
+function RunMain()
 {
-#1  
-   echo "Stage $Exec_setup_steady_stage: Setting up directories and rights"
-
-   if [ "$Upgrade_requested" == 1   ] 
-      then 
-      Do_SetNextStage $Exec_reset_pacman  
-      return      #nothing to do
-   fi
-
-   sudo mkdir /steady/neeo-custom
-   sudo chown neeo:wheel /steady/neeo-custom
-   sudo chmod -R 775 /steady/neeo-custom
-   Do_SetNextStage $Exec_reset_pacman
-
-}
-
-function Do_Reset_Pacman()
-{
-#2
-   echo "Stage $Exec_reset_pacman: Restoring pacman to a workable state"
-
-   if [ "$Upgrade_requested" == "1"  ] 
-      then 
-       Do_SetNextStage $Exec_install_nvm
-      return      #nothing to do
-   fi
-   sudo ln -s /etc/ca-certificates/extracted/ca-bundle.trust.crt /etc/ssl/certs/ca-certificates.crt
-   curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/safepackages.tgz' -o ~/safepackages.tgz 
-   pushd . >/dev/null
-   mkdir ~/safepackages
-   cd ~/safepackages
-   tar -xvf ~/safepackages.tgz
-   rm ~/safepackages.tgz
-   cd var/cache/pacman/pkg
-   sudo pacman -Sy
-   sudo pacman -U * --noconfirm --force 
-   # this update will change /etc/passwd, removing the userid for the time sync-daemon
-   # let's add it again.  
-   sudo useradd systemd-timesync -m -d /home/systemd-timesync
-   # and remove some annoying error-messages on login because of a missing dunction in perl
-   echo "append_path () {
-       case \":$PATH:\" in
-           *:\"$\1\":*)
-               ;;
-           *)
-               PATH=\"${PATH:+$PATH:}$1\"
-       esac
-   }" > ~/perlbins1.sh
-   sudo cp /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh.org
-   if [ "$?" -ne 0 ]
-      then
-      echo "Error in saving old perlbin-profile, not updating"
-   else
-      cat ~/perlbins1.sh /etc/profile.d/perlbin.sh > ~/perlbin.sh 
-      sudo cp ~/perlbin.sh /etc/profile.d/perlbin.sh
-      rm ~/perlbins1.sh
-      rm ~/perlbin.sh 
-   fi
-   popd  >/dev/null  
-   Do_SetNextStage $Exec_install_nvm
-
-
-}
-
-function Do_Install_NVM()
-{
-#3
-    echo "Stage $Exec_install_nvm: installing NVM, then secondary npm&node"
-       
-   if [ "$Upgrade_requested" == 1  ]
-      then
-       Do_SetNextStage $Exec_finish_nvm
-      return      #nothing to do
-   fi
-
-    if [ -e ~/.nvm ]
-       then 
-      echo "NVM already installed"
-    else   
-      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
-    fi 
-    sudo chmod -R ugo+rx /home/neeo/.nvm 
-    MyBashrc=$(cat ~/.bashrc |grep 'export NVM_DIR="$HOME/.nvm')
-    if [ "$?" -ne 0 ]
-       then
-        echo 'export NVM_DIR="$HOME/.nvm" ' >> ~/.bashrc
-        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm'>> ~/.bashrc
-    fi
-    . ~/.bashrc   
-    nvm install --lts=erbium
-    if [ "$?" -ne 0 ]
-       then
-        echo 'Error installing npm&node (nvm install --lts=erbium)'
-
-        echo 'This error happens sometimes and is easy to fix'
-        echo 'Please execute the following command, then run installmeta again: . ~/.bashrc (yes: dot blank dot!)'
-        sleep 10s
-        GoOn=0
-        return
-    fi
-    MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2')   # add some usefull commands to .bashrc to make life easier
-    if [ "$?" -ne 0 ]
-       then
-        echo 'export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2' >> ~/.bashrc
-    fi
-    . ~/.bashrc
-    Do_SetNextStage $Exec_finish_nvm
-
-}
-
-function Do_Finish_NVM()
-{
-#4
-   echo "Stage $Exec_finish_nvm: Finishing setup npm&node"
-       
-   if [ "$Upgrade_requested" == 1 ]
-      then
-      Do_SetNextStage $Exec_install_git
-      return      #nothing to do
-   fi
-   MyNPM=$(npm -v)
-   if [[ "$MyNPM" == "6.14.9" ]]
-      then
-      echo "NPM 6.14.9 was already installed, skipping" 
-   else
-      pushd .  >/dev/null 
-      cd /steady/neeo-custom/
-      npm install npm -g  --no-fund
-      if [ "$?" -ne 0 ]
-         then
-          echo 'Error installing npm (npm install npm -g)'
-          GoOn=0
-          popd  >/dev/null 
-          return
-      fi 
-   fi
-       popd >/dev/null 
-    Do_SetNextStage $Exec_install_git
-
-}
-
-function Do_Install_Git()
-{
-#5
-   echo "Stage $Exec_install_git: installing GIT"
-       
-   if [ "$Upgrade_requested" == 1 ]
-      then
-      Do_SetNextStage $Exec_install_meta
-      return      #nothing to do
-   fi
-  MyGit=$(command -v git)
-  if [[ "$MyGit" == "" ]]
-      then 
-      MyRetries=$RetryCountPacman
-      NoSuccessYet=1
-      while  [  $NoSuccessYet -eq 1 ] ; do
-         sudo pacman -S --overwrite  '/*' --noconfirm  git
-         if [ "$?" -ne 0 ]
-             then
-             if [[ $MyRetries -gt 1 ]]
-                then 
-                echo 'Error occured during Install of Git - retrying'
-             else 
-               echo ' Error occured during Install of Git - giving up'
-               GoOn=0
-               return
-             fi          
-         else
-           NoSuccessYet=0       # signal done, break the loop
-         fi
-         ((MyRetries=MyRetries-1))
-      done
-   else
-      echo "Git is already installed"   
-   fi
-    Do_SetNextStage $Exec_install_meta
-
-}
-
-function Do_Install_Meta()
-{
-#6
-   echo "Stage $Exec_install_meta: installing Metadriver (JAC459/metadriver)"
-       
-   #if [ "$Upgrade_requested" == 1 ]
-   #   then
-   #   return                                                           # in tis case, upgrade will be requiresd
-   #fi
-   pushd . >/dev/null 
-
-   cd /steady/neeo-custom/ 
-   if [[ ! -e  ".meta"  ]]
-       then 
-      mkdir .meta
-   fi
-   cd .meta 
-   npm install jac459/metadriver  --no-fund
-   if [ "$?" -ne 0 ]
-       then
-        echo 'Install of metadriver failed'
-        GoOn=0
-        popd >/dev/null 
-        return
-   fi
-   popd >/dev/null 
-
-   Do_SetNextStage $Exec_install_mosquitto
-
-}
-
-function Do_Install_Mosquitto()
-{
-#7
-   echo "Stage $Exec_install_mosquitto: installing Mosquitto"
-       
-   if [[ "$Upgrade_requested" == "1" ]]
-      then
-      Do_SetNextStage $Exec_install_nodered
-      return      #nothing to do
-   fi
-  MyMosquitto=$(command -v mosquitto)
-   if [[ "$MyMosquitto" == "" ]]
-      then 
-#      sudo useradd -u 1002 mosquitto -m -d /home/mosquitto
-      MyRetries=$RetryCountPacman
-      NoSuccessYet=1
-      while  [[  $NoSuccessYet -ne 0 ]] ; do
-         sudo pacman -S  --noconfirm --overwrite  /usr/lib/libnsl.so,/usr/lib/libnsl.so.2,/usr/lib/pkgconfig/libnsl.pc  mosquitto
-         if [ "$?" -ne 0 ]
-             then
-             if [[ $MyRetries -gt 1 ]]
-                then 
-                echo 'Error occured during Install of Mosquitto - retrying'
-             else 
-                echo ' Error occured during Install of Mosquitto - giving up'
-               GoOn=0
-               return
-             fi          
-         else
-          NoSuccessYet=0       # signal done, break the loop
-         fi
-         ((MyRetries=MyRetries-1))
-      done
-   fi 
- 
-    Do_SetNextStage $Exec_install_nodered 
-}
-
-function Do_Install_NodeRed()
-{   
-#8
-   echo "Stage $Exec_install_nodered: installing Node-Red"
-
-   echo ""
-   echo ""
-   echo "This tsk will run and multiple ways to install are attempted"
-   echo "    Therefore you WILL see errors, IGNORE ˜THEM!"
-   echo "     Check last statements, should be:"
-   echo "        + node-red@1.2.6"
-   echo "        added 316 packages from 284 contributors"
-   echo ""
-   echo ""       
-   if [[ "$Upgrade_requested" == 1 ]]
-      then
-      Do_SetNextStage $Exec_backup_solution
-      return      #nothing to do
-   fi
-
-
-   #sudo npm install -g --unsafe-perm node-red # since 2020-12-05, global install produces the following error :
-#        > publish-please@5.5.2 preinstall /home/neeo/.nvm/versions/node/v12.20.0/lib/node_modules/node-red/node_modules/publish-please
-#     > node lib/pre-install.js
-#
-#
-#     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#     !! Starting from v2.0.0 publish-please can't be installed globally.          !!
-#     !! Use local installation instead : 'npm install --save-dev publish-please', !!
-#     !! Or use npx if you do not want to install publish-please as a dependency.  !!
-#     !! (learn more: https://github.com/inikulin/publish-please#readme).          !!
-#     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#
-#     npm WARN optional SKIPPING OPTIONAL DEPENDENCY: fsevents@^2.1.2 (node_modules/node-red/node_modules/jest-haste-map/node_modules/fsevents):
-#     npm WARN notsup SKIPPING OPTIONAL DEPENDENCY: Unsupported platform for fsevents@2.2.1: wanted {"os":"darwin","arch":"any"} (current: {"os":"linux","arch":"arm"})
-#
-#     npm ERR! code ELIFECYCLE
-#     npm ERR! errno 1
-#     npm ERR! publish-please@5.5.2 preinstall: `node lib/pre-install.js`
-#     npm ERR! Exit status 1
- 
-   if [[ ! -e /steady/neeo-custom/.node-red/node_modules/node-red/red.js ]]
-      then 
-      pushd . >/dev/null
-      mkdir /steady/neeo-custom/.node-red
-      cd /steady/neeo-custom/.node-red
-      npm install --unsafe-perm node-red  --no-fund
-      if [[ "$?" -ne 0 ]]
-          then
-         echo 'Install of NodeRed failed'
-         GoOn=0
-         popd >/dev/null
-         return
-      fi
-      cd /steady/neeo-custom/.node-red/node_modules/node-red
-      ln -s red.js node-red.js
-      popd >/dev/null
-   fi 
-#   Do_SetNextStage $Exec_setup_pm2     
-   Do_SetNextStage $Exec_backup_solution 
-
-}
-
-function Do_Backup_solution()
-{
-#9
-   echo "Stage $Exec_backup_solution: Setting up backup"
-
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_9_Introduced" ]]
-      then
-      Do_SetNextStage $Exec_install_jq
-   fi
-
-  MyRSync=$(command -v rsync)
-   if [[ "$MyRSync" == "" ]]
-      then 
-      MyRetries=$RetryCountPacman
-      NoSuccessYet=1
-      while  [  $NoSuccessYet -ne 0 ] ; do
-         sudo pacman -S --overwrite  '/*' --noconfirm  rsync
-         if [ "$?" -ne 0 ]
-             then
-             if [[ $MyRetries -gt 1 ]]
-                then 
-                echo 'Error occured during Install of rsync - retrying'
-             else 
-               echo ' Error occured during Install of rsync - giving up'
-               GoOn=0
-               return
-             fi          
-         else
-          NoSuccessYet=0       # signal done, break the loop
-         fi
-         ((MyRetries=MyRetries-1))
-      done 
-   fi 
-   Do_SetNextStage $Exec_install_jq
-
-}
-
-function Do_install_jq()
-{
-#A
-   echo "Stage $Exec_install_jq : add jq package"
-
-
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_A_Introduced" ]]
-      then
-      Do_SetNextStage $Exec_setup_pm2
-      return      #nothing to do
-   fi
-
-   MyRSync=$(command -v jq)
-   if [[ "$MyRSync" == "" ]]
-      then
-      MyRetries=$RetryCountPacman
-      NoSuccessYet=1
-      while  [  $NoSuccessYet -ne 0 ] ; do
-         sudo pacman -S --overwrite  '/*' --noconfirm  jq
-         if [ "$?" -ne 0 ]
-             then
-             if [[ $MyRetries -gt 1 ]]
-                then
-                echo 'Error occured during Install of jq - retrying'
-             else
-               echo ' Error occured during Install of jq	 - giving up'
-               GoOn=0
-               return
-             fi
-         else
-          NoSuccessYet=0       # signal done, break the loop
-         fi 
-         ((MyRetries=MyRetries-1))
-      done
-   fi
-
-   Do_SetNextStage $Exec_setup_pm2
-
-}
-
-function Do_Setup_PM2()
-{
-#X
-#sudo   /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /home/neeo
-#sudo systemctl stop neeo-pm2.service
-#sudo systemctl disable neeo-pm2.service
-   echo "Stage $Exec_setup_pm2: Activating services in PM2"
-       
-   if [[  "$UpgradeMetaOnly_requested" == "1" ]]
-      then 
-         pm2 restart meta
-         Do_SetNextStage $Exec_finish
-         return
-   fi 
-   
-   if [[ "$Upgrade_requested" == "1" && "$InstalledVersion" > "$Function_X_Introduced" ]]
-      then
-     if [[  -e "/steady/neeo-custom.pm2" ]] #old PM2 has bug, it runs everything as root, so remove old PM2
-        then
-        sudo pm2 stop all
-        sudo pm2 kill
-        sudo systemctl stop pm2-neeo.service
-        sudo systemctl disable pm2-neeo.service      
-        sudo chown -R neeo:wheel /steady/neeo-custom
-     fi
-   fi
-   
+#This is the main routine, it picks up after some small checks/initializations
+#  Its main purpose is to load the actual backend-code and run it. 
 
    pushd . >/dev/null
-   cd /steady/neeo-custom
-   if [[ ! -e ".pm2neeo" ]]
-       then
-      mkdir .pm2neeo
+   if [[ ! "$MyPath"  == "$HOME"* ]]    # Is this script already running from the file located in home directory?
+      then
+        if [[  "$PWD"  != "$HOME" ]]    # Or are we perhaps already in homedir (then user jyst enters scriptname, so previous test will fail) ?
+      	   then                           # no, we need to copy it to our home-directory for later use
+           echo "Copying installmeta.sh to homedir ($HOME) for future use"
+           cp $BASH_SOURCE ~
+        fi
    fi
 
-#   MyBashrc=$(cat ~/.bashrc |grep '/steady/neeo-custom/.pm2neeo')   # add some usefull commands to .bashrc to make life easier
-#   if [ "$?" -ne 0 ]
-#       then
-#        echo 'sudo chmod 777 /steady/neeo-custom/.pm2neeo/pub.sock' >> ~/.bashrc
-#        echo 'sudo chmod 777 /steady/neeo-custom/.pm2neeo/rpc.sock'>> ~/.bashrc
-#   fi 
-   pm2 startup
-   sleep 20s    #give pm2 time to update some files beofre starting the service
-   MyPM2=$(sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/)
-   . ~/.bashrc
+   MyURL="https://raw.githubusercontent.com/jac459/neeo2021onward/Beta-2021-01%232/Meta%20running%20in%20Brain/installmeta-Backend.sh"
+   sudo rm -r ~/installmeta-Backend.sh 2>/dev/null
+   MyCurl=$(curl $MyURL -s -k -o ~/installmeta-Backend.sh)
+   if [ "$?" -ne 0 ]
+      then
+      echo "Could not download backend, contact support via discord channel"
+      GoOn=0
+      return  
+   fi    
 
-   MyPM2=$(pm2 list)
-   if [[ $(echo "$MyPM2" | grep -i 'mosquitto') == "" ]]
-       then
-       pm2 start mosquitto
-   else
-       pm2 restart mosquitto
-   fi   
-   if [[ "$?" != 0 ]]
-      then 
-      echo "Error adding mosquitto-start to PM2"
-   fi 
-
-   if [[ $(echo "$MyPM2" | grep -i 'node-red') == "" ]];
-      then 
-      cd /steady/neeo-custom/.node-red/node_modules/node-red
-      pm2 start node-red.js -f  --node-args='--max-old-space-size=128'
-   else 
-      pm2 restart node-red
-   fi
-   if [[ "$?" != 0 ]]
-      then 
-      echo "Error adding node-red-start to PM2"
-   fi 
-
-
-   if [[ $(echo "$MyPM2" | grep -i 'meta') == "" ]];
-      then    
-      cd /steady/neeo-custom/.meta/node_modules/\@jac459/metadriver
-      pm2 start meta.js
-   else 
-      pm2 restart meta
-   fi 
-   if [[ "$?" != 0 ]]
-      then 
-      echo "Error adding meta-start to PM2"
-   fi
-
-   popd >/dev/null
-
-   pm2 save
-   Do_SetNextStage $Exec_finish
+   . ~/installmeta-Backend.sh
+   sudo rm -r ~/installmeta-Backend.sh 
 }
 
-function Do_Upgrade()
+function Check_elevated_rights
 {
-   if [[ ("$InstalledVersion"  = "1.0") && ("$FoundStage"="A") ]]        # fix the "old v1.0 Finish-action", so that is compatible with newer versions
+    
+    MyUsername=$USER
+    if [[ "$MyUsername" ==  "root" ]]
       then
-      FoundStage="Z"
-   fi
-
-  
-   if [ "$FoundStage" != "Z" ]  # Yes, but did we already have a completely installed system?
-      then
-      echo "Please let installer run first to a succesful end before upgrading: $FoundStage"
-      Upgrade_requested=0       # reset update-request to no
-   else
-      if [  "$UpgradeMetaOnly_requested" == "1" ]
-            then 
-            echo "We will be upgrading metadriver only; then we will restart metadriver"
-            Do_SetNextStage "$Exec_install_meta"
-            Upgrade_requested=1       # reset update-request to no
-      else
-         if [ !  "$LatestVersion" \> "$InstalledVersion"  ]  # is the installed version lower than the latest availalbe version (My Version)?
-            then
-            echo "No need to upgrade, you are already on the latest version ($LatestVersion)"
-            Upgrade_requested=0       # reset update-request to no
-         else         
-           echo "We will be upgrading this installation from v$InstalledVersion into v$LatestVersion"
-           Do_SetNextStage "$Exec_all_stages"
-         fi
-      fi
-   fi
-
-
-}    
-
-function Do_Finish()
-{
-echo "$LatestVersion:"+$(date +"%Y-%m-%d %T") >>$VersionFile
-echo "We are done installng, your installation is now at level v$LatestVersion"
-
+       echo "please call this program with normal rights (do not use sudo or su)"
+       GoOn=0 
+   fi                             
 }
+
+function Check_Call_Level()
+{
+  if [[ $SHLVL -lt 2 ]]
+     then
+     echo ""
+     echo ""
+     echo ""   
+     echo "This installer needs to be started without the '.'but with 'sh'  in front of the installmeta.sh"
+     echo "   please run sh installermeta.sh"
+     echo ""
+     echo ""
+     echo ""
+     GoOn=0
+  fi
+}
+
 
 ##Main routine
 
-# first setup a cntrol-C handler
-trap no_ctrlc SIGINT
-Determine_versions=0
-if [ $# -gt 0 ]; then
-  # Parsing any parameters passed to us
-  while (( "$#" )); do
-    case "$1" in
-      --help)
-        usage && return
-        shift
-        ;;
-      --reset)
-        Do_Reset
-        shift
-        ;;
-      --meta-only)
-        Upgrade_requested=1
-        UpgradeMetaOnly_requested="1"
-        shift
-        ;; 
-      --upgrade)
-        Upgrade_requested=1
-        shift
-        ;;   
-     --get-versions)   
-        Determine_versions=1
-        shift
-        ;;
-      -*|--*=) # unsupported flags
-        echo ""
-        echo "" 
-        echo ""
-        echo "Error: Unsupported flag $1" >&2
-        echo ""
-        echo ""
-        echo ""
-        usage
-        return
-        ;;
-      *)
-        echo "Please use correct format for arguments $1 not recognised" >&2
-        usage &&return
-        ;; 
-    esac
-  done
+MyPath=$0
+MyExecutable=$BASH_SOURCE   # save the name and location of this script, we might need to copy script later
+Check_Call_Level
+if [[  "$GoOn" == "1" ]] 
+   then
+   Check_elevated_rights
+   if [[  "$GoOn" == "1" ]]
+      then 
+      Do_Mount_root
+      if [[  "$GoOn" == "1" ]] 
+      then 
+         RunMain
+      fi
+   fi
 fi
 
 
-# Special functions go first.
-    
-# This one just determines the current version of meta and the latest available one
-if [ "$Determine_versions" == "1" ]
-   then
-      Do_Version_Check                              # Check if upgrade is possible/allowed
-      return
-   fi
-
-GoOn=1
-Do_ReadState                   # check to see if we ran before; if so, get the state of the previous runs and the version of installer thatran
-echo $InstalledVersion
-
-echo "We are running in stage $FoundStage of 9"
-
-# Do we need to run a special check first, before entering the state-machine?
-if [ "$Upgrade_requested" == "1" ]
-   then
-      Do_Upgrade                                    # Check if upgrade is possible/allowed
-      if [ "$Upgrade_requested" != "1" ]              # Did Do_Upgrade function made a decision overriding update-request?
-         then
-         echo "Upgrade was rejected"
-         return
-      fi
-   fi 
 
 
 
-# We come here if we want the stste machine to run. 
-# This may be for an entire run, a restarted run, or selected entries-only
 
-while (( "$GoOn"==1 )); do
-#    echo " case with $FoundStage"
-    case $FoundStage in
-       $Exec_mount_root_stage)
-          Do_Mount_root
-       ;;
-       $Exec_setup_steady_stage)
-          Do_Setup_steady_directory_struct
-       ;;
-       $Exec_reset_pacman)
-          Do_Reset_Pacman
-       ;;
-       $Exec_install_nvm)
-         Do_Install_NVM
-       ;;
-       $Exec_finish_nvm)
-         Do_Finish_NVM
-       ;;
-       $Exec_install_git)
-          Do_Install_Git 
-       ;;
-       $Exec_install_meta)
-          Do_Install_Meta 
-       ;;
-       $Exec_install_mosquitto)
-          Do_Install_Mosquitto
-       ;;
-       $Exec_install_nodered)
-          Do_Install_NodeRed
-       ;;
-       $Exec_backup_solution)
-          Do_Backup_solution
-       ;;
-       $Exec_install_jq)
-          Do_install_jq
-       ;;
-       $Exec_setup_pm2)
-          Do_Setup_PM2
-       ;;
-       $Exec_backup_solution)
-          Do_Backup_solution
-       ;;
-       $Exec_finish)                                          # this is just a placeholder
-          Do_SetNextStage $Exec_finish_done    # If we've come here, FoundStage can be set to the max position: Z
-       ;;  
-       $Exec_finish_done)
-          Do_Finish
-          GoOn=0
-       ;;       
-       *)
-          echo -n "Package already ran till end"
-          GoOn=0
-       ;;
-    esac
-
-echo ""  
-done
