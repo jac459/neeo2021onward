@@ -21,24 +21,32 @@ If you want to be absolutely sure, you can reboot the brain (sudo reboot now), b
 Installation of metadriver (and prerequisites) on NEEO-Brain 
 login through ssh -i <key-ending with id_rsa> -l neeo
 
-   1 sudo mount -o remount,rw /
-   2 curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh' -k -o installmeta.sh
-   3 . installmeta.sh (yes: dot blank) 
-   In some cases, the script stops with a message telling you to execute a command and restart the installer.
-   In this case:
-   3) type the command . .bashrc and enter ; this sets up links to the nvm-package that the installer failed to do.
-   4) type again the command you entered before curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh' -k | bash
+Then execute thease commands:
+   1) https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh -o /tmp/installmeta.sh   3 . installmeta.sh (yes: dot blank) 
+   2) sh /tmp/installmeta.sh 
 
-We've noticed that the official site hosting the necessary archlinux-packages is quiote instable (overloaded).
+What happens here?
+1) This will download a small (driver-) program from github to a writable temporary folder.
+2) This executes the driver program.
+   The program first prepares the Brain, copies itself to the user's homedirectory (/home/neeo), then it
+   downloads the actual installer from github and runs it.
+
+For future runs of the installer, you can simply run the same driver program from user neeo's homedirectory like this:
+    sh ~/installmeta.sh without the need to manually grab any code from internet, thats all taken care of by the driver.
+
+We've noticed that some official sites (mirrors) hosting the necessary archlinux-packages are a bitinstable (overloaded).
 You will notice this with errors like these 
 "error: failed retrieving file 'krb5-1.18.2-1-armv7h.pkg.tar.xz' from mirror.archlinuxarm.org : The requested URL returned error: 502""
-Key in here is the error 502......  This is sometng we cannot solve, just rerun the installer the same way and it will pick up where it stopped.
-I've now changed the code to retry failed installations for 10 times, that solved my problems with 502-errors.
+Key in here is the error 502......  This is something we cannot solve as these aren't our servers, just rerun the installer the same way and it will pick up where it stopped.
 
-If you get an error stating "No such file or directory", then you've ended up in the wrong directory; just do a cd ~ and rerun installer. 
-You can just restart multiple times, eventually, the package will be downloaded and cached.
+The installer determines if it needs to restart a previously interrupted run. It can be run again and again without problems, it detects itself if something needs to be updated/installed. 
+Just run it. It runs till Stage Z, signalling that it has ran till completion. If it finds errors it cannot resolve by itself, it will abort with some (hopefully) helpful messages.
+Look at the message, if it instructs you to run a command following that, otherwise you can ask for help in the support page on discord.
+If you receive a message (more or less) similar as this:
+chmod: cannot access '/steady/neeo-custom/.pm2   <etc .etc .etc>
+you can ignore it. It has  no effect on neeo or meta and will be fixed in a next version of installer-backend. 
 
-That's it, you should now be able to see node-red as a webpage server from your brain: <IP-address Brain>:1880 in your browser
+If all went well, you should now be able to see node-red as a webpage server from your brain: <IP-address Brain>:1880 in your browser
 
 If you receive errors during execution of pm2-commands, that is a known timing issue: authorisation on pm2-files is being set during logon. But if your login is earlier than pm2 has started, files will not be there. To solve it: execute . ~/.bashrc or logout and login again.
 
