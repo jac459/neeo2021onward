@@ -22,7 +22,7 @@ Installation of metadriver (and prerequisites) on NEEO-Brain
 login through ssh -i <key-ending with id_rsa> -l neeo
 
 Then execute thease commands:
-   1) https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh -o /tmp/installmeta.sh   3 . installmeta.sh (yes: dot blank) 
+   1) curl -k https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh -o /tmp/installmeta.sh
    2) sh /tmp/installmeta.sh 
 
 What happens here?
