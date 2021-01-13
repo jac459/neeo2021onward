@@ -1,29 +1,12 @@
 
 Below are all the commands that need to run on your freshly rooted brain.
-As the /steady directory is only partially cleaned during a firmware upgrade and you might have installed some things there, 
-let's make sure that the older stuff is removed before we are going to start the installer.
-This is purely, because I expect the brain to be freshly rooted, not full of remnants of other tries.
-
-
-NORMALLY, cleanup should not be necessary
-
-
-Removal old stuff:
-login through ssh
- a) sudo mount -o remount,rw /
- b) sudo rm -r /steady/neeo-custom
- c) sudo rm -r /steady/pm2-meta
- d) sudo rm -r /steady/.installer
- 
-Not all of these directories will be there, so no problems if commands fail.
-If you want to be absolutely sure, you can reboot the brain (sudo reboot now), but that should not be necessary 
 
 Installation of metadriver (and prerequisites) on NEEO-Brain 
 login through ssh -i <key-ending with id_rsa> -l neeo
 
-Then execute thease commands:
-   1) curl -k https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh -o /tmp/installmeta.sh
-   2) sh /tmp/installmeta.sh 
+Then execute these commands:
+
+  curl -k https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh -o /tmp/installmeta.sh && sh /tmp/installmeta.sh 
 
 What happens here?
 1) This will download a small (driver-) program from github to a writable temporary folder.
