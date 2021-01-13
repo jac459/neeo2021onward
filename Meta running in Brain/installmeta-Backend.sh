@@ -121,6 +121,7 @@ function Do_ReadState()
       echo "Stage Z" > "$Statefile"          # and create an empty file 
       #FoundStage="0"  no longer needed                        # tell the installer we start from scratch
   fi
+  sudo chown neeo:wheel "$Statefile"      # make sure normal user can access the file
   LastLine=$(tail -n 1 "$Statefile")
   if [ "$LastLine" != "" ] 
      then
