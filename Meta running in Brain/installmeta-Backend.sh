@@ -230,8 +230,21 @@ function Do_Setup_steady_directory_struct()
       sudo chown neeo:wheel /steady/neeo-custom
       sudo chmod -R 775 /steady/neeo-custom
    fi
+
+   MyBashrc=$(cat ~/.bashrc | grep -i '/steady/neeo-custom/.pm2/' ) # atill old style chmods in .bashrc?
+   if [[ "$MyBashrc" != "" ]]  # yes
+      then
+      echo "Removing stale chmod statementas form .bashrc, saving old version as ~.bashrc.old"
+      sed '/\/steady\/neeo-custom\/.pm2/d' .bashrc >~/bashrcx
+      mv ~/.bashrc ~/.bashrc.old
+      mv ~/bashrcx  ~/.bashrc
+   fi 
+
    Do_SetNextStage $NextStep
 }
+
+
+      
 
 function SubFunction_Update_Pacman()
 {
