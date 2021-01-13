@@ -363,7 +363,7 @@ function Do_Install_NVM()
    fi
 
    MyBashrc=$(cat ~/.bashrc |grep 'export NVM_DIR="$HOME/.nvm')
-   if [ "$?" -ne 0 ]
+   if [[ "$MyBashrc" == "" ]] 
       then
        echo 'export NVM_DIR="$HOME/.nvm" ' >> ~/.bashrc
        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm'>> ~/.bashrc
@@ -390,7 +390,7 @@ function Do_Install_NVM()
    fi
 
    MyBashrc=$(cat ~/.bashrc |grep 'export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2')   # add some usefull commands to .bashrc to make life easier
-   if [ "$?" -ne 0 ]
+   if [[ $MyBashrc == "" ]]
       then
        echo 'export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2' >> ~/.bashrc
    fi
