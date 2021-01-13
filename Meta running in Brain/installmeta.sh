@@ -3,6 +3,9 @@
 # Driver script for Meta Installer NEEO-Brain
 #
 GoOn=1                # the main loop controller
+Parm1=$1              # Save parameters passed to driver
+Parm2=$2
+Parm3=$3
 
 function Do_Mount_root()
 {
@@ -44,7 +47,8 @@ function RunMain()
       return  
    fi    
 
-#   . ~/installmeta-Backend.sh
+   sh ~/installmeta-Backend.sh $Parm1 $Parm2 $parm3
+
    sudo rm -r ~/installmeta-Backend.sh 
 }
 
