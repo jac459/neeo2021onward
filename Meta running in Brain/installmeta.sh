@@ -47,7 +47,7 @@ function RunMain()
       return  
    fi    
 
-   sh ~/installmeta-Backend.sh $Parm1 $Parm2 $parm3
+   sh ~/installmeta-Backend.sh $Parm1 $Parm2 $Parm3
 
    sudo rm -r ~/installmeta-Backend.sh 
 }
