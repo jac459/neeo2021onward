@@ -27,13 +27,10 @@ function RunMain()
 #  Its main purpose is to load the actual backend-code and run it. 
 
    pushd . >/dev/null
-   if [[ ! "$MyPath"  == "$HOME"* ]]    # Is this script already running from the file located in home directory?
+   if [[ ( "$MyPath"  == "/tmp/installmeta.sh") || (! -e ~/installmetash) ]] 
       then
-        if [[  "$PWD"  != "$HOME" ]]    # Or are we perhaps already in homedir (then user jyst enters scriptname, so previous test will fail) ?
-      	   then                           # no, we need to copy it to our home-directory for later use
-           echo "Copying installmeta.sh to homedir ($HOME) for future use"
-           cp $BASH_SOURCE ~
-        fi
+      echo "Copying installmeta.sh to homedir ($HOME) for future use"
+      cp $BASH_SOURCE ~
    fi
 
    # beta MyURL="https://raw.githubusercontent.com/jac459/neeo2021onward/Beta-2021-01%232/Meta%20running%20in%20Brain/installmeta-Backend.sh"
@@ -47,7 +44,7 @@ function RunMain()
       return  
    fi    
 
-   . ~/installmeta-Backend.sh
+#   . ~/installmeta-Backend.sh
    sudo rm -r ~/installmeta-Backend.sh 
 }
 
