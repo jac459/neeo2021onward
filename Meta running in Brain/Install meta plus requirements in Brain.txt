@@ -45,3 +45,14 @@ Restarting meta:
 pm2 restart meta
 
 Please note that all commands in this textfile are CASE-sensitive!!! Type them in exactly as they are presentes here. 
+
+Parameters supported
+
+The following parameters can be used to control behavior of the installer:  
+  --help            display this help and exits
+  --reset           Start installer from scratch; this is handy if installer seems stuck, can always be used
+  --meta-only       Only pull a new version of metadriver, and restart it
+  --get-versions    Output current version of meta and the last available one
+
+Normally, you should not use anyt parameter. It is adviced to not use --meta_only, but just start installer from the beginning.
+This way, you are sure tat all requirements for .meta are fulfilled.
