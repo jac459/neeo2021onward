@@ -303,7 +303,7 @@ function Do_Reset_Pacman()
 
    # and remove some annoying error-messages on login because of a missing dunction in perl
     MyPerlAppend=$(cat /etc/profile.d/perlbin.sh |grep 'append_path ()')
-    if [ "$?" -ne 0 ]
+    if [[ "$MyPerlAppend" == "" ]]
        then
         echo "append_path () {
           case \":$PATH:\" in
