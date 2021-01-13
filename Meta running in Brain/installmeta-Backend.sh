@@ -763,7 +763,7 @@ function Do_Setup_PM2()
 
    cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
    pm2 delete meta  2>/dev/null 1>/dev/null          #Kill old pm2-process that runs as user neeo
-   pm2 start --name meta meta.js  #--  '{"Brain":"localhost","LogSeverity":"VERBOSE","Components":["meta"]}'
+   pm2 start --name meta meta.js  --  '{"Brain":"localhost"}'
 
    if [[ "$?" != 0 ]]
       then 
