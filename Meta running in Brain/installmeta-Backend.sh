@@ -500,6 +500,9 @@ function Do_Install_Mosquitto()
    echo "Stage $Exec_install_mosquitto: installing Mosquitto"
    NextStep=$Exec_install_nodered      
 
+   userdel  mosquitto > /dev/null 2>/dev/null   #older installer had mosquitto user added, delete it
+   groupdel  mosquitto > /dev/null 2>/dev/null  #and delete the group too
+
    MyCommand=$(command -v mosquitto)
    if [[ "$MyCommand" == "" ]]
       then 
@@ -797,6 +800,10 @@ function Do_Setup_PM2()
 
 function Do_Finish()
 {
+sudo rm -r /steady/neeo-custom/.pm2 > /dev/null 2>/dev/null                  #clean stale pm2
+sudo rm -r /steady/neeo-custom/pm2-meta > /dev/null 2>/dev/null              #clean stale pm2
+sudo rm  /steady/neeo-custom/.pm2neeo/.pm2/logs/* > /dev/null 2>/dev/null    #clean current pm2 logs
+
 echo "$LatestVersion:"+$(date +"%Y-%m-%d %T") >>$VersionFile
 echo "We are done installng, your installation is now at level v$LatestVersion"
 
