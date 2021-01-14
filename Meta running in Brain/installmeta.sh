@@ -28,16 +28,16 @@ function RunMain()
 {
 #This is the main routine, it picks up after some small checks/initializations
 #  Its main purpose is to load the actual backend-code and run it. 
-
+   MyName="installmeta.sh"
    pushd . >/dev/null
-   if [[ ( "$MyPath"  == "/tmp/installmeta.sh") || (! -e ~/installmetash) ]] 
+   if [[ ( "$MyPath"  == "/tmp/$MyName") || (! -e ~/installmetash) ]] 
       then
       echo "Copying installmeta.sh to homedir ($HOME) for future use"
       cp $BASH_SOURCE ~
    fi
 
    # beta MyURL="https://raw.githubusercontent.com/jac459/neeo2021onward/Beta-2021-01%232/Meta%20running%20in%20Brain/installmeta-Backend.sh"
-   MyURL='https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta-Backend.sh'
+   MyURL='https://raw.githubusercontent.com/jac459/neeo2021onward/Beta-2021-01%233/Meta%20running%20in%20Brain/installmeta-Backend.sh'
    sudo rm -r ~/installmeta-Backend.sh 2>/dev/null
    MyCurl=$(curl $MyURL -s -k -o ~/installmeta-Backend.sh)
    if [ "$?" -ne 0 ]
