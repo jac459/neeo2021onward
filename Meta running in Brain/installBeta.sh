@@ -28,7 +28,7 @@ function RunMain()
 {
 #This is the main routine, it picks up after some small checks/initializations
 #  Its main purpose is to load the actual backend-code and run it. 
-   MyName="installmeta.sh"
+   MyName="installBeta.sh"
    pushd . >/dev/null
    if [[ ( "$MyPath"  == "/tmp/$MyName") || (! -e ~/installmetash) ]] 
       then
