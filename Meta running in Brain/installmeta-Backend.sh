@@ -93,6 +93,7 @@ Options:
   --reset           Start installer from scratch)
   --meta-only       Only pull a new version of metadriver, and restart it
   --get-versions    Output current version of meta and the last available one
+  --FreeSpace       Run a cleanup of logfiles opn /steady/neeo-custom directory that might fill up /steady filesystem
 EOL
 }
 
@@ -237,7 +238,7 @@ function Do_Setup_steady_directory_struct()
    #sudo chmod -R 775 /steady/neeo-custom # do this always, to prevent errors by unnecessary  sudo usage
    sudo chown -R neeo:wheel /steady/neeo-custom
 
-   MyBashrc=$(cat ~/.bashrc | grep -i '/steady/neeo-custom/.pm2/' ) # atill old style chmods in .bashrc?
+   MyBashrc=$(cat ~/.bashrc | grep -i '/steady/neeo-custom/.pm2/' ) # still old style chmods in .bashrc?
    if [[ "$MyBashrc" != "" ]]  # yes
       then
       echo "Removing stale chmod statementas form .bashrc, saving old version as ~.bashrc.old"
@@ -246,11 +247,7 @@ function Do_Setup_steady_directory_struct()
       mv ~/bashrcx  ~/.bashrc
    fi 
 
-
 }
-
-
-      
 
 function SubFunction_Update_Pacman()
 {
@@ -749,9 +746,21 @@ function Do_Setup_PM2()
    sudo chown -R neeo /steady/neeo-custom/.pm2neeo 1>/dev/null 2>/dev/null
 
    export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2 # make sure we can run the next pm2-commands under the correct PM2 (the one we just setuop) 
+   
+   MyPM2=$(pm2 l|grep -i pm2-logrotate) 
+   if [[ "$MyPM2" == "" ]]                            # check if we have already logrotate in place
+      then 
+      pm2 install pm2-logrotate
+      pm2 set  pm2-logrotate:rotateInterval '0 0 * * *'
+      pm2 set pm2-logrotate:max_size 10M
+      pm2 set pm2-logrotate:retain 3
+      pm2 set  pm2-logrotate:workerinterval 120
+   fi 
+   pm2 delete meta      2>/dev/null 1>/dev/null  # delete old startup entries
+   pm2 delete node-red  2>/dev/null 1>/dev/null 
    pm2 delete mosquitto 2>/dev/null 1>/dev/null
 #   pm2 start mosquitto  -o "/dev/null" -e "/dev/null"  # we'll keep this one for later
-   pm2 start mosquitto
+   pm2 start mosquitto -o /tmp/neeo/mosquitto-o -e /tmp/neeo/mosquitto-e
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding mosquitto-start to PM2"
@@ -760,8 +769,7 @@ function Do_Setup_PM2()
    fi 
 
    cd /steady/neeo-custom/.node-red/node_modules/node-red
-   pm2 delete node-red  2>/dev/null 1>/dev/null          #Kill old pm2-process that runs as user neeo
-   pm2 start node-red.js   --node-args='--max-old-space-size=128'
+   pm2 start node-red.js -o /tmp/neeo/nodered-o -e /tmp/neeo/nodered-e  --node-args='--max-old-space-size=128'
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding node-red-start to PM2"
@@ -770,9 +778,9 @@ function Do_Setup_PM2()
    fi 
 
    cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
-   pm2 delete meta  2>/dev/null 1>/dev/null          #Kill old pm2-process that runs as user neeo
-   pm2 start --name meta meta.js  --  '{"Brain":"localhost"}'
+   pm2 start --name meta meta.js  -o /tmp/neeo/meta-o -e /tmp/neeo/meta-e --  '{"Brain":"localhost","LogSeverity":"WARNING","Components":["meta"]}'
 
+   
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding meta-start to PM2"
@@ -932,12 +940,6 @@ function RunMain()
 {
 #This is the main routine, it handles the logic after init is done
 
-   # This one just determines the current version of meta and the latest available one
-   if [ "$Determine_versions" == "1" ]
-      then
-         Do_Version_Check                              # Check if upgrade is possible/allowed
-         return
-      fi
 
    GoOn=1
    Do_ReadState                   # check to see if we ran before; if so, get the state of the previous runs and the version of installer thatran
@@ -995,7 +997,8 @@ trap no_ctrlc SIGINT
         GoOn=0 
         ;;        
       --get-versions)
-        Determine_versions=1
+        Do_Version_Check
+        GoOn=0
         ;;
       -*|--*=) # unsupported flags
         echo ""
@@ -1018,10 +1021,13 @@ trap no_ctrlc SIGINT
     done
   fi
 
-  Check_Call_Level
-
-  if [[ "$GoOn" == "1" ]]
+  if [[ "$GoOn" == "1" ]]  
      then 
-      echo "Starting State machine that will orchestrate installaton actions"
-     RunMain 
-  fi
+     Check_Call_Level
+
+     if [[ "$GoOn" == "1" ]]
+        then 
+         echo "Starting State machine that will orchestrate installaton actions"
+      RunMain 
+      fi
+   fi
