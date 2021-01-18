@@ -708,11 +708,14 @@ function SubFunction_Remove_Old_PM2()
 
    OrgPM2_HOME=$PM2_HOME                      # Save variable that tells pm2 where to find it's base (next sudo's will loose this env)
    pm2 kill   2>/dev/null 1>/dev/null         #Kill old pm2-process that runs as user neeo
-   sudo kill  2>/dev/null 1>/dev/null         #And the one that might be running as root, might be started by mistake or by old installer                 
+   sudo pm2 kill  2>/dev/null 1>/dev/null         #And the one that might be running as root, might be started by mistake or by old installer                 
    sudo PM2_HOME=$OrgPM2_HOME pm2 kill 2>/dev/null 1>/dev/null     #Kill old pm2-process that might have been started by the user by mistake (sudo pm2 xxx)
 
    sudo systemctl disable pm2-neeo.service
    sudo systemctl disable pm2-root.service
+
+   echo "Stage $Exec_setup_pm2: Done removing older versions of PM2"
+
 }
 
 
@@ -720,8 +723,7 @@ function Do_Setup_PM2()
 {
 #X
 
-   echo "Stage $Exec_setup_pm2: Activating services in PM2"
-   NextStep=$Exec_finish   
+   echo "Stage $Exec_setup_pm2: Activating services in PM2"   
 
    if [[  "$UpgradeMetaOnly_requested" == "1" ]]
       then 
@@ -740,6 +742,7 @@ function Do_Setup_PM2()
       MyRemoveOld=$(sudo rm -r /steady/neeo-custom/pm2-meta)    $ same
    fi
    
+   echo "And build the correct version of PM2"   
    pm2 startup
    sudo chown -R neeo /steady/neeo-custom/.pm2neeo 1>/dev/null 2>/dev/null
    sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/ 2>/dev/null 1>/dev/null
@@ -747,6 +750,8 @@ function Do_Setup_PM2()
 
    export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2 # make sure we can run the next pm2-commands under the correct PM2 (the one we just setuop) 
    
+   echo "Check if pm2-logrotate is enabled"
+
    MyPM2=$(pm2 l|grep -i pm2-logrotate) 
    if [[ "$MyPM2" == "" ]]                            # check if we have already logrotate in place
       then 
@@ -756,10 +761,16 @@ function Do_Setup_PM2()
       pm2 set pm2-logrotate:retain 3
       pm2 set  pm2-logrotate:workerinterval 120
    fi 
+
+   echo "Delete startup entries (if exist)"
+
    pm2 delete meta      2>/dev/null 1>/dev/null  # delete old startup entries
    pm2 delete node-red  2>/dev/null 1>/dev/null 
    pm2 delete mosquitto 2>/dev/null 1>/dev/null
 #   pm2 start mosquitto  -o "/dev/null" -e "/dev/null"  # we'll keep this one for later
+ 
+   echo "And add latest startup versions to PM2"
+
    pm2 start mosquitto -o /tmp/neeo/mosquitto-o -e /tmp/neeo/mosquitto-e
    if [[ "$?" != 0 ]]
       then 
