@@ -23,7 +23,7 @@ Statedir="/steady/.installer"
 Statefile="$Statedir/state"
 FoundStage=0
 VersionFile="$Statedir/version"
-LatestVersion=1.6
+LatestVersion=1.7b
 InstalledVersion=1.0  # assume that the first installer ran before.
 Upgrade_requested=0
 UpgradeMetaOnly_requested="0"
@@ -702,7 +702,7 @@ function Do_install_broadlink()
 function SubFunction_Remove_Old_PM2()
 {  
 #Xa
-   echo "Stage $Exec_setup_pm2: Removing older versions of PM2"
+   echo "Stage $Exec_setup_pm2: Removing older versions of PM2 (if there)"
 
 # Remove old versions of PM2 that are setup to run as service
 
