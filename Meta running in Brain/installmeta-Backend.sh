@@ -739,7 +739,7 @@ function Do_Setup_PM2()
        then
       mkdir .pm2neeo
       MyRemoveOld=$(sudo rm -r /steady/neeo-custom/.pm2)        # remove directories that were used by older PM2-instances  
-      MyRemoveOld=$(sudo rm -r /steady/neeo-custom/pm2-meta)    $ same
+      MyRemoveOld=$(sudo rm -r /steady/neeo-custom/pm2-meta)    # same
    fi
    
    echo "And build the correct version of PM2"   
