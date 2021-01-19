@@ -316,32 +316,7 @@ function Do_Reset_Pacman()
        sudo useradd systemd-timesync -m -d /home/systemd-timesync
    fi
 
-   # and remove some annoying error-messages on login because of a missing dunction in perl
-    MyPerlAppend=$(cat /etc/profile.d/perlbin.sh |grep 'append_path ()')
-    if [[ "$MyPerlAppend" == "" ]]
-       then
-        echo "append_path () {
-          case \":$PATH:\" in
-              *:\"$\1\":*)
-                  ;;
-              *)
-                  PATH=\"${PATH:+$PATH:}$1\"
-          esac
-        }" > ~/perlbins1.sh
-        sudo cp /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh.org
-        if [ "$?" -ne 0 ]
-           then
-           echo "Error in saving old perlbin-profile, not updating"
-        else
-           cat ~/perlbins1.sh /etc/profile.d/perlbin.sh > ~/perlbin.sh 
-           sudo cp ~/perlbin.sh /etc/profile.d/perlbin.sh
-           rm ~/perlbins1.sh
-           rm ~/perlbin.sh 
-        fi
-   fi
    popd  >/dev/null  
-
-
 
 }
 
@@ -811,6 +786,30 @@ function Do_Finish()
 sudo rm -r /steady/neeo-custom/.pm2 > /dev/null 2>/dev/null                  #clean stale pm2
 sudo rm -r /steady/neeo-custom/pm2-meta > /dev/null 2>/dev/null              #clean stale pm2
 sudo rm  /steady/neeo-custom/.pm2neeo/.pm2/logs/* > /dev/null 2>/dev/null    #clean current pm2 logs
+
+# and remove some annoying error-messages on login because of a missing dunction in perl
+    MyPerlAppend=$(cat /etc/profile.d/perlbin.sh |grep 'append_path ()')
+    if [[ "$MyPerlAppend" == "" ]]
+       then
+        echo "append_path () {
+          case \":$PATH:\" in
+              *:\"$\1\":*)
+                  ;;
+              *)
+                  PATH=\"${PATH:+$PATH:}$1\"
+          esac
+        }" > ~/perlbins1.sh
+        sudo cp /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh.org
+        if [ "$?" -ne 0 ]
+           then
+           echo "Error in saving old perlbin-profile, not updating"
+        else
+           cat ~/perlbins1.sh /etc/profile.d/perlbin.sh > ~/perlbin.sh 
+           sudo cp ~/perlbin.sh /etc/profile.d/perlbin.sh
+           rm ~/perlbins1.sh
+           rm ~/perlbin.sh 
+        fi
+   fi
 
 echo "$LatestVersion:"+$(date +"%Y-%m-%d %T") >>$VersionFile
 echo "We are done installng, your installation is now at level v$LatestVersion"
