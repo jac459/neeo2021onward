@@ -235,8 +235,9 @@ function Do_Setup_steady_directory_struct()
       sudo chown neeo:wheel /steady/neeo-custom
       sudo chmod -R 775 /steady/neeo-custom
    fi
-   #sudo chmod -R 775 /steady/neeo-custom # do this always, to prevent errors by unnecessary  sudo usage
+   
    sudo chown -R neeo:wheel /steady/neeo-custom
+   sudo chown -R neeo:wheel /home/neeo 
 
    MyBashrc=$(cat ~/.bashrc | grep -i '/steady/neeo-custom/.pm2/' ) # still old style chmods in .bashrc?
    if [[ "$MyBashrc" != "" ]]  # yes
