@@ -771,7 +771,7 @@ function Do_Setup_PM2()
  
    echo "And add latest startup versions to PM2"
 
-   pm2 start mosquitto -o /tmp/neeo/mosquitto-o -e /tmp/neeo/mosquitto-e
+   pm2 start mosquitto -o /tmp/mosquitto-o -e /tmp/mosquitto-e
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding mosquitto-start to PM2"
@@ -780,7 +780,7 @@ function Do_Setup_PM2()
    fi 
 
    cd /steady/neeo-custom/.node-red/node_modules/node-red
-   pm2 start node-red.js -o /tmp/neeo/nodered-o -e /tmp/neeo/nodered-e  --node-args='--max-old-space-size=128'
+   pm2 start node-red.js -o /tmp/nodered-o -e /tmp/nodered-e  --node-args='--max-old-space-size=128'
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding node-red-start to PM2"
@@ -789,7 +789,7 @@ function Do_Setup_PM2()
    fi 
 
    cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
-   pm2 start --name meta meta.js  -o /tmp/neeo/meta-o -e /tmp/neeo/meta-e --  '{"Brain":"localhost","LogSeverity":"WARNING","Components":["meta"]}'
+   pm2 start --name meta meta.js  -o /tmp/meta-o -e /tmp/meta-e --  '{"Brain":"localhost","LogSeverity":"WARNING","Components":["meta"]}'
 
    
    if [[ "$?" != 0 ]]
