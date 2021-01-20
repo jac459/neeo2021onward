@@ -23,7 +23,7 @@ Statedir="/steady/.installer"
 Statefile="$Statedir/state"
 FoundStage=0
 VersionFile="$Statedir/version"
-LatestVersion=1.6
+LatestVersion=1.7b
 InstalledVersion=1.0  # assume that the first installer ran before.
 Upgrade_requested=0
 UpgradeMetaOnly_requested="0"
@@ -93,6 +93,7 @@ Options:
   --reset           Start installer from scratch)
   --meta-only       Only pull a new version of metadriver, and restart it
   --get-versions    Output current version of meta and the last available one
+  --FreeSpace       Run a cleanup of logfiles opn /steady/neeo-custom directory that might fill up /steady filesystem
 EOL
 }
 
@@ -149,6 +150,11 @@ function Do_ReadState()
 
 function Do_SetNextStage()
 {
+   if [[ "$GoOn" == "0" ]]  # qe're called to update, but previous stage has told us to not go-on, don;t update status-file.
+      then  
+      return
+   fi
+
    if [ "$1" = "" ]
       then 
       echo "error in setting nextstage; input for nextstage is empty"
@@ -188,7 +194,6 @@ function Do_Mount_root()
 {
 #0
    echo "Stage 0: Setup a rewritable root-partition (includes entry in /etc/fstab)"
-   NextStep=$Exec_setup_steady_stage
 
    MyMounts=$(mount|grep 'dev/mmcblk0p2 ')
    if [ $(echo "$MyMounts" | grep '(ro') ]
@@ -216,14 +221,13 @@ function Do_Mount_root()
     else
        echo "/etc/fstab was already patched, so it seems, continuing"
     fi
-    Do_SetNextStage $NextStep
+ 
 } 
 
 function Do_Setup_steady_directory_struct()
 {
 #1  
    echo "Stage $Exec_setup_steady_stage: Setting up directories and rights"
-   NextStep=$Exec_reset_pacman
 
    if [ ! -e /steady/neeo-custom ]
       then   
@@ -231,10 +235,11 @@ function Do_Setup_steady_directory_struct()
       sudo chown neeo:wheel /steady/neeo-custom
       sudo chmod -R 775 /steady/neeo-custom
    fi
-   #sudo chmod -R 775 /steady/neeo-custom # do this always, to prevent errors by unnecessary  sudo usage
+   
    sudo chown -R neeo:wheel /steady/neeo-custom
+   sudo chown -R neeo:wheel /home/neeo 
 
-   MyBashrc=$(cat ~/.bashrc | grep -i '/steady/neeo-custom/.pm2/' ) # atill old style chmods in .bashrc?
+   MyBashrc=$(cat ~/.bashrc | grep -i '/steady/neeo-custom/.pm2/' ) # still old style chmods in .bashrc?
    if [[ "$MyBashrc" != "" ]]  # yes
       then
       echo "Removing stale chmod statementas form .bashrc, saving old version as ~.bashrc.old"
@@ -243,11 +248,7 @@ function Do_Setup_steady_directory_struct()
       mv ~/bashrcx  ~/.bashrc
    fi 
 
-   Do_SetNextStage $NextStep
 }
-
-
-      
 
 function SubFunction_Update_Pacman()
 {
@@ -288,7 +289,6 @@ function Do_Reset_Pacman()
 {
 #2
    echo "Stage $Exec_reset_pacman: Restoring pacman to a workable state"
-   NextStep=$Exec_install_nvm
 
    MyYear=$(date +'%Y')   # Test to see if we have a corruoted date (timesyncd fails)
    if [[ "$MyYear" == "2018" ]]
@@ -317,32 +317,7 @@ function Do_Reset_Pacman()
        sudo useradd systemd-timesync -m -d /home/systemd-timesync
    fi
 
-   # and remove some annoying error-messages on login because of a missing dunction in perl
-    MyPerlAppend=$(cat /etc/profile.d/perlbin.sh |grep 'append_path ()')
-    if [[ "$MyPerlAppend" == "" ]]
-       then
-        echo "append_path () {
-          case \":$PATH:\" in
-              *:\"$\1\":*)
-                  ;;
-              *)
-                  PATH=\"${PATH:+$PATH:}$1\"
-          esac
-        }" > ~/perlbins1.sh
-        sudo cp /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh.org
-        if [ "$?" -ne 0 ]
-           then
-           echo "Error in saving old perlbin-profile, not updating"
-        else
-           cat ~/perlbins1.sh /etc/profile.d/perlbin.sh > ~/perlbin.sh 
-           sudo cp ~/perlbin.sh /etc/profile.d/perlbin.sh
-           rm ~/perlbins1.sh
-           rm ~/perlbin.sh 
-        fi
-   fi
    popd  >/dev/null  
-   Do_SetNextStage $NextStep
-
 
 }
 
@@ -350,7 +325,6 @@ function Do_Install_NVM()
 {
 #3
    echo "Stage $Exec_install_nvm: installing NVM, then secondary npm&node"
-   NextStep=$Exec_finish_nvm      
 
    pushd .  >/dev/null
    if [ -e  ~/.nvm/nvm.sh ]
@@ -395,7 +369,7 @@ function Do_Install_NVM()
        echo 'export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2' >> ~/.bashrc
    fi
    . ~/.bashrc
-   Do_SetNextStage $NextStep
+
 
 }
 
@@ -403,7 +377,6 @@ function Do_Finish_NVM()
 {
 #4
    echo "Stage $Exec_finish_nvm: Finishing setup npm&node"
-   NextStep=$Exec_install_git
        
   pushd .  >/dev/null
    MyNPM=$(npm -v)
@@ -422,7 +395,7 @@ function Do_Finish_NVM()
       fi 
    fi
        popd >/dev/null 
-    Do_SetNextStage $NextStep
+ 
 
 }
 
@@ -430,7 +403,6 @@ function Do_Install_Git()
 {
 #5
    echo "Stage $Exec_install_git: installing GIT"
-   NextStep=$Exec_install_meta     
 
    MyCommand=$(command -v git)
    if [[ "$MyCommand" == "" ]]
@@ -457,7 +429,7 @@ function Do_Install_Git()
    else
       echo "Git is already installed"   
    fi
-    Do_SetNextStage $NextStep
+ 
 
 }
 
@@ -465,13 +437,6 @@ function Do_Install_Meta()
 {
 #6
    echo "Stage $Exec_install_meta: installing Metadriver (JAC459/metadriver)"
-      
-   if [[ "$UpgradeMetaOnly_requested" == "1" ]]
-      then
-      NextStep=$Exec_setup_pm2
-   else
-      NextStep=$Exec_install_mosquitto     
-   fi
 
   pushd .  >/dev/null
    cd /steady/neeo-custom/ 
@@ -490,7 +455,7 @@ function Do_Install_Meta()
    fi
    popd >/dev/null 
 
-   Do_SetNextStage $NextStep
+
 
 }
 
@@ -498,7 +463,6 @@ function Do_Install_Mosquitto()
 {
 #7
    echo "Stage $Exec_install_mosquitto: installing Mosquitto"
-   NextStep=$Exec_install_nodered      
 
    MyCommand=$(command -v mosquitto)
    if [[ "$MyCommand" == "" ]]
@@ -524,16 +488,13 @@ function Do_Install_Mosquitto()
       done
    fi 
  
-    Do_SetNextStage $NextStep
+ 
 }
 
 function Do_Install_NodeRed()
 {   
 #8
    echo "Stage $Exec_install_nodered: installing Node-Red"
-   NextStep=$Exec_backup_solution
-
-
  
    if [[ ! -e /steady/neeo-custom/.node-red/node_modules/node-red/red.js ]]
       then 
@@ -563,7 +524,7 @@ function Do_Install_NodeRed()
       ln -s red.js node-red.js
       popd >/dev/null
    fi 
-   Do_SetNextStage $NextStep 
+ 
 
 }
 
@@ -596,7 +557,7 @@ function Do_Backup_solution()
          ((MyRetries=MyRetries-1))
       done 
    fi 
-   Do_SetNextStage $NextStep
+
 
 }
 
@@ -630,7 +591,7 @@ function Do_install_jq()
       done
    fi
 
-   Do_SetNextStage $NextStep
+
 
 }
 
@@ -664,9 +625,7 @@ function Do_install_python()
          ((MyRetries=MyRetries-1))
       done
    fi  
-       
-   Do_SetNextStage $Exec_install_broadlink
-   
+          
 }
 
 function Do_install_broadlink()
@@ -710,18 +669,25 @@ function Do_install_broadlink()
    fi
    popd >/dev/null
 
-   Do_SetNextStage $NextStep
+
 }
 
 function SubFunction_Remove_Old_PM2()
 {  
 #Xa
-   echo "Stage $Exec_setup_pm2: Removing older versions of PM2"
+   echo "Stage $Exec_setup_pm2: Removing older versions of PM2 (if there)"
 
 # Remove old versions of PM2 that are setup to run as service
 
-   pm2 kill 2>/dev/null 1>/dev/null          #Kill old pm2-process that runs as user neeo
-   sudo pm2 kill 2>/dev/null 1>/dev/null     #Kill old pm2-process that might have been started by the user by mistake (sudo pm2 xxx)
+   OrgPM2_HOME=$PM2_HOME                      # Save variable that tells pm2 where to find it's base (next sudo's will loose this env)
+   pm2 kill   2>/dev/null 1>/dev/null         #Kill old pm2-process that runs as user neeo
+   sudo pm2 kill  2>/dev/null 1>/dev/null         #And the one that might be running as root, might be started by mistake or by old installer                 
+   sudo PM2_HOME=$OrgPM2_HOME pm2 kill 2>/dev/null 1>/dev/null     #Kill old pm2-process that might have been started by the user by mistake (sudo pm2 xxx)
+
+   sudo systemctl disable pm2-neeo.service
+   sudo systemctl disable pm2-root.service
+
+   echo "Stage $Exec_setup_pm2: Done removing older versions of PM2"
 
 }
 
@@ -730,13 +696,11 @@ function Do_Setup_PM2()
 {
 #X
 
-   echo "Stage $Exec_setup_pm2: Activating services in PM2"
-   NextStep=$Exec_finish   
+   echo "Stage $Exec_setup_pm2: Activating services in PM2"   
 
    if [[  "$UpgradeMetaOnly_requested" == "1" ]]
       then 
          pm2 restart meta
-         Do_SetNextStage $NextStep
          return
    fi 
    sudo chown -R neeo /steady/neeo-custom/.pm2neeo 1>/dev/null 2>/dev/null  
@@ -748,18 +712,39 @@ function Do_Setup_PM2()
        then
       mkdir .pm2neeo
       MyRemoveOld=$(sudo rm -r /steady/neeo-custom/.pm2)        # remove directories that were used by older PM2-instances  
-      MyRemoveOld=$(sudo rm -r /steady/neeo-custom/pm2-meta)    $ same
+      MyRemoveOld=$(sudo rm -r /steady/neeo-custom/pm2-meta)    # same
    fi
    
+   echo "And build the correct version of PM2"   
    pm2 startup
    sudo chown -R neeo /steady/neeo-custom/.pm2neeo 1>/dev/null 2>/dev/null
-   sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  /var/opt/pm2/lib/node_modules/pm2/bin/pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/ 2>/dev/null 1>/dev/null
+   sudo env PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2/  pm2 startup systemd -u neeo --hp /steady/neeo-custom/.pm2neeo/ 2>/dev/null 1>/dev/null
    sudo chown -R neeo /steady/neeo-custom/.pm2neeo 1>/dev/null 2>/dev/null
 
    export PM2_HOME=/steady/neeo-custom/.pm2neeo/.pm2 # make sure we can run the next pm2-commands under the correct PM2 (the one we just setuop) 
+   
+   echo "Check if pm2-logrotate is enabled"
+
+   MyPM2=$(pm2 l|grep -i pm2-logrotate) 
+   if [[ "$MyPM2" == "" ]]                            # check if we have already logrotate in place
+      then 
+      pm2 install pm2-logrotate
+      pm2 set  pm2-logrotate:rotateInterval '0 0 * * *'
+      pm2 set pm2-logrotate:max_size 10M
+      pm2 set pm2-logrotate:retain 3
+      pm2 set  pm2-logrotate:workerinterval 120
+   fi 
+
+   echo "Delete startup entries (if exist)"
+
+   pm2 delete meta      2>/dev/null 1>/dev/null  # delete old startup entries
+   pm2 delete node-red  2>/dev/null 1>/dev/null 
    pm2 delete mosquitto 2>/dev/null 1>/dev/null
 #   pm2 start mosquitto  -o "/dev/null" -e "/dev/null"  # we'll keep this one for later
-   pm2 start mosquitto
+ 
+   echo "And add latest startup versions to PM2"
+
+   pm2 start mosquitto -o /tmp/mosquitto-o -e /tmp/mosquitto-e
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding mosquitto-start to PM2"
@@ -768,8 +753,7 @@ function Do_Setup_PM2()
    fi 
 
    cd /steady/neeo-custom/.node-red/node_modules/node-red
-   pm2 delete node-red  2>/dev/null 1>/dev/null          #Kill old pm2-process that runs as user neeo
-   pm2 start node-red.js   --node-args='--max-old-space-size=128'
+   pm2 start node-red.js -o /tmp/nodered-o -e /tmp/nodered-e  --node-args='--max-old-space-size=128'
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding node-red-start to PM2"
@@ -778,9 +762,9 @@ function Do_Setup_PM2()
    fi 
 
    cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
-   pm2 delete meta  2>/dev/null 1>/dev/null          #Kill old pm2-process that runs as user neeo
-   pm2 start --name meta meta.js  --  '{"Brain":"localhost"}'
+   pm2 start --name meta meta.js  -o /tmp/meta-o -e /tmp/meta-e --  '{"Brain":"localhost","LogSeverity":"WARNING","Components":["meta"]}'
 
+   
    if [[ "$?" != 0 ]]
       then 
       echo "Error adding meta-start to PM2"
@@ -791,12 +775,40 @@ function Do_Setup_PM2()
    popd >/dev/null
 
    pm2 save
-   Do_SetNextStage $NextStep
+
 }
 
 
 function Do_Finish()
 {
+sudo rm -r /steady/neeo-custom/.pm2 > /dev/null 2>/dev/null                  #clean stale pm2
+sudo rm -r /steady/neeo-custom/pm2-meta > /dev/null 2>/dev/null              #clean stale pm2
+sudo rm  /steady/neeo-custom/.pm2neeo/.pm2/logs/* > /dev/null 2>/dev/null    #clean current pm2 logs
+
+# and remove some annoying error-messages on login because of a missing dunction in perl
+    MyPerlAppend=$(cat /etc/profile.d/perlbin.sh |grep 'append_path ()')
+    if [[ "$MyPerlAppend" == "" ]]
+       then
+        echo "append_path () {
+          case \":$PATH:\" in
+              *:\"$\1\":*)
+                  ;;
+              *)
+                  PATH=\"${PATH:+$PATH:}$1\"
+          esac
+        }" > ~/perlbins1.sh
+        sudo cp /etc/profile.d/perlbin.sh /etc/profile.d/perlbin.sh.org
+        if [ "$?" -ne 0 ]
+           then
+           echo "Error in saving old perlbin-profile, not updating"
+        else
+           cat ~/perlbins1.sh /etc/profile.d/perlbin.sh > ~/perlbin.sh 
+           sudo cp ~/perlbin.sh /etc/profile.d/perlbin.sh
+           rm ~/perlbins1.sh
+           rm ~/perlbin.sh 
+        fi
+   fi
+
 echo "$LatestVersion:"+$(date +"%Y-%m-%d %T") >>$VersionFile
 echo "We are done installng, your installation is now at level v$LatestVersion"
 
@@ -812,8 +824,23 @@ echo "*                                                                         
 echo "*                                                                                                     *"
 echo "*                                                                                                     *"
 echo "*******************************************************************************************************"
+}
 
+function CleanupSteadyLogs()
+{ 
+   # Special function that can be called to free-up space pn /steady filesystem. Older installers lead to filling it up with Logs. 
+   
+   echo ""
+   echo ""
+   echo "First remove old logfiles as they may have filled the /steady filesystem, leaving no room to install anything"
 
+   echo "Current use of /steady filesystem:"
+   df -h | grep steady
+   echo "Cleaning up log-files"
+   sudo find /steady/neeo-custom -name "*.log" -exec rm -rf {} \;
+   echo "After thiscleanup, use of filesystem is:"
+   df -h | grep steady
+   echo ""
 }
 
 function    Do_State_Machine()
@@ -825,49 +852,62 @@ function    Do_State_Machine()
    #    echo " case with $FoundStage"
        case $FoundStage in
           $Exec_mount_root_stage)
+             CleanupSteadyLogs
              Do_Mount_root
+             Do_SetNextStage $Exec_setup_steady_stage
           ;;
           $Exec_setup_steady_stage)
+
              Do_Setup_steady_directory_struct
+             Do_SetNextStage $Exec_reset_pacman
           ;;
           $Exec_reset_pacman)
              Do_Reset_Pacman
+             Do_SetNextStage $Exec_install_nvm
           ;;
           $Exec_install_nvm)
             Do_Install_NVM
+            Do_SetNextStage $Exec_finish_nvm
           ;;
           $Exec_finish_nvm)
             Do_Finish_NVM
+            Do_SetNextStage $Exec_install_git
           ;;
           $Exec_install_git)
              Do_Install_Git
+             Do_SetNextStage $Exec_install_meta
           ;;
           $Exec_install_meta)
-             Do_Install_Meta
+             Do_Install_Meta 
+             Do_SetNextStage $Exec_install_mosquitto
           ;;
           $Exec_install_mosquitto)
              Do_Install_Mosquitto
+             Do_SetNextStage $Exec_install_nodered
           ;;
           $Exec_install_nodered)
              Do_Install_NodeRed
+             Do_SetNextStage $Exec_backup_solution
           ;;
           $Exec_backup_solution)
              Do_Backup_solution
+             Do_SetNextStage $Exec_install_jq
           ;;
           $Exec_install_jq)
              Do_install_jq
+             Do_SetNextStage $Exec_install_python
           ;;
           $Exec_install_python)
              Do_install_python
+             Do_SetNextStage $Exec_install_broadlink
           ;;
           $Exec_install_broadlink)
              Do_install_broadlink
+             Do_SetNextStage $Exec_setup_pm2
           ;;
           $Exec_setup_pm2)
              Do_Setup_PM2
-          ;;
-          $Exec_backup_solution)
-             Do_Backup_solution
+             Do_SetNextStage $Exec_finish
           ;;
           $Exec_finish)                                          # this is just a placeholder
              Do_SetNextStage $Exec_finish_done    # If we've come here, FoundStage can be set to the max position: Z
@@ -908,12 +948,6 @@ function RunMain()
 {
 #This is the main routine, it handles the logic after init is done
 
-   # This one just determines the current version of meta and the latest available one
-   if [ "$Determine_versions" == "1" ]
-      then
-         Do_Version_Check                              # Check if upgrade is possible/allowed
-         return
-      fi
 
    GoOn=1
    Do_ReadState                   # check to see if we ran before; if so, get the state of the previous runs and the version of installer thatran
@@ -960,12 +994,19 @@ trap no_ctrlc SIGINT
       --reset)
         Do_Reset
         ;;
-      --meta-only)
-        Upgrade_requested=1
-        UpgradeMetaOnly_requested="1"
+      --FreeSpace)
+        CleanupSteadyLogs    
+        GoOn=0      
         ;;
+      --meta-only)
+        UpgradeMetaOnly_requested="1"   # Signal functions that only a small part will run
+        Do_Install_Meta                 # update meta
+        Do_Setup_PM2                    # stop and start meta in pm2 to getr the new version.
+        GoOn=0 
+        ;;        
       --get-versions)
-        Determine_versions=1
+        Do_Version_Check
+        GoOn=0
         ;;
       -*|--*=) # unsupported flags
         echo ""
@@ -988,10 +1029,13 @@ trap no_ctrlc SIGINT
     done
   fi
 
-  Check_Call_Level
-
-  if [[ "$GoOn" == "1" ]]
+  if [[ "$GoOn" == "1" ]]  
      then 
-      echo "Starting State machine that will orchestrate installaton actions"
-     RunMain 
-  fi
+     Check_Call_Level
+
+     if [[ "$GoOn" == "1" ]]
+        then 
+         echo "Starting State machine that will orchestrate installaton actions"
+      RunMain 
+      fi
+   fi
