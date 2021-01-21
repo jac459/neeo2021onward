@@ -23,7 +23,7 @@ Statedir="/steady/.installer"
 Statefile="$Statedir/state"
 FoundStage=0
 VersionFile="$Statedir/version"
-LatestVersion=1.7b
+LatestVersion=1.7
 InstalledVersion=1.0  # assume that the first installer ran before.
 Upgrade_requested=0
 UpgradeMetaOnly_requested="0"
@@ -229,15 +229,19 @@ function Do_Setup_steady_directory_struct()
 #1  
    echo "Stage $Exec_setup_steady_stage: Setting up directories and rights"
 
+   sudo chown -R root:root  /steady                  # set rights correct for all directories we use with neeo and .meta 
+   sudo chown -R neeo:wheel /home/neeo               # set rights on homedir so we can write to it and by processes running as neeo: f.e. node-red 
+   sudo chown -R neeo:wheel  /steady/.installer/     # for keeping state and version.
    if [ ! -e /steady/neeo-custom ]
       then   
       sudo mkdir /steady/neeo-custom
       sudo chown neeo:wheel /steady/neeo-custom
       sudo chmod -R 775 /steady/neeo-custom
+   else
+      sudo chown -R neeo:wheel  /steady/neeo-custom/
    fi
    
-   sudo chown -R neeo:wheel /steady/neeo-custom
-   sudo chown -R neeo:wheel /home/neeo 
+
 
    MyBashrc=$(cat ~/.bashrc | grep -i '/steady/neeo-custom/.pm2/' ) # still old style chmods in .bashrc?
    if [[ "$MyBashrc" != "" ]]  # yes
@@ -246,6 +250,12 @@ function Do_Setup_steady_directory_struct()
       sed '/\/steady\/neeo-custom\/.pm2/d' .bashrc >~/bashrcx
       mv ~/.bashrc ~/.bashrc.old
       mv ~/bashrcx  ~/.bashrc
+   fi 
+
+   MyBashrc=$(cat ~/.bashrc | grep -i 'alias pm2_NEEO' ) # Did we already defoine the pm3_org alias to look at original pm2? 
+   if [[ "$MyBashrc" != "" ]]  # yes
+      then
+      echo "'alias pm2_NEEO='sudo PM2_HOME=/var/opt/pm2 pm2'" >> ~/.bashrc
    fi 
 
 }
@@ -259,28 +269,36 @@ function SubFunction_Update_Pacman()
 
    # and as we found out, the package  systemd-libs (247.2-1 causes problems with HTTP(S) not resolving anymore, so let's install an earlier version of it (downgrade it) 
    pushd .  >/dev/null
-   if [[ -e ~/safepackages/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz ]]
-      then
-      echo "Saved package already downloaded"
-   else
-      mkdir ~/safepackages
-   	cd ~/safepackages
-      curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz' -o systemd-libs-246.6-1.1-armv7h.pkg.tar.xz
-   fi
+   #if [[ -e ~/safepackages/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz ]]
+   #   then
+   #   echo "Saved package already downloaded"
+   #else
+   #   mkdir ~/safepackages
+   #   cd ~/safepackages
+   #   curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz' -o systemd-libs-246.6-1.1-armv7h.pkg.tar.xz
+   #fi
 
-   sudo pacman -Su pacman --noconfirm --force     # use old style pacman command
+   sudo pacman -Su pacman --noconfirm --force     # use old style pacman command (--force will be replaced by --overwrite with this update)
    if [[ ! "$?" == 0 ]]
        then 
        echo "Problems updating the system, run aborted"
        exit  
    fi
+
+   # okay, tricky part from the past. Is now solvesd quiote easily....
+
+   # full system upgrade that is done above, will install new systemd-lib package. That package requires new content to nsswitch.conf 
+   # If not done, allcdns-resolution fails (as we experienced from previous installations). The systemd-lib package adds the correct content
+   # however, it saves it as a new file, users need to rename themselves, so, we're going to backup original one and bring the new content in place  
+   sudo /etc/nsswitch.conf  /etc/nsswitch.conf.pacsave           
+   sudo /etc/nsswitch.conf.pacnew  /etc/nsswitch.conf            
    # and downgrade systemd-package 
-   cd ~/safepackages
-   sudo pacman -U systemd*  --noconfirm --overwrite '/*' # will give: warning: downgrading package systemd-libs (247.2-1 => 246.6-1.1)
+   #cd ~/safepackages
+   #sudo pacman -U systemd*  --noconfirm --overwrite '/*' # will give: warning: downgrading package systemd-libs (247.2-1 => 246.6-1.1)
 # and as we found out, the package  systemd-libs (247.2-1 causes problems with HTTP(S) not resolving anymore, so let's install an earlier version of it (downgrade it) 
 
-   cd ~
-   rm -r ~/safepackages
+   #cd ~
+   #rm -r ~/safepackages
 
    popd >/dev/null
 } 
