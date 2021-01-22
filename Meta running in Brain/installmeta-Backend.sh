@@ -684,7 +684,7 @@ function Do_install_broadlink()
       then
       cd /steady/neeo-custom/.broadlink
       echo "Downloading .META's Broadlink_driver"
-      curl https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta-Backend.sh -s -o Broadlink_Driver.py      
+      curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta-Backend.sh' -s -o Broadlink_Driver.py      
    fi 
    popd >/dev/null
 
