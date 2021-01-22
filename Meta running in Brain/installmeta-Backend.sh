@@ -23,29 +23,13 @@ Statedir="/steady/.installer"
 Statefile="$Statedir/state"
 FoundStage=0
 VersionFile="$Statedir/version"
-LatestVersion=1.7
+LatestVersion=1.71b
 InstalledVersion=1.0  # assume that the first installer ran before.
 Upgrade_requested=0
 UpgradeMetaOnly_requested="0"
 GoOn=1                # the main loop controller
 Determine_versions=0
 RetryCountPacman=10   # becasue of the instability of some archlinux repositories, url-error 502 might occur
-
-#Following table maintains the version where a new or changed functionality was AddedOrChanged; used to check if we need to execute an upgrade for a function  
-Function_0_AddedOrChanged=1.0
-Function_1_AddedOrChanged=1.0
-Function_2_AddedOrChanged=1.5
-Function_3_AddedOrChanged=1.0
-Function_4_AddedOrChanged=1.0
-Function_5_AddedOrChanged=1.0
-Function_6_AddedOrChanged=1.0
-Function_7_AddedOrChanged=1.0
-Function_8_AddedOrChanged=1.0
-Function_9_AddedOrChanged=1.0
-Function_A_AddedOrChanged=1.3
-Function_B_AddedOrChanged=1.3 
-Function_C_AddedOrChanged=1.5
-Function_X_AddedOrChanged=1.2
 
 # Following are the various stages that can be executed
 Exec_mount_root_stage=0
@@ -255,7 +239,7 @@ function Do_Setup_steady_directory_struct()
    MyBashrc=$(cat ~/.bashrc | grep -i 'alias pm2_NEEO' ) # Did we already defoine the pm3_org alias to look at original pm2? 
    if [[ "$MyBashrc" == "" ]]  # yes
       then
-      echo "'alias pm2_NEEO='sudo PM2_HOME=/var/opt/pm2 pm2'" >> ~/.bashrc
+      echo "alias pm2_NEEO='sudo PM2_HOME=/var/opt/pm2 pm2'" >> ~/.bashrc
    fi 
 
 }
@@ -688,6 +672,19 @@ function Do_install_broadlink()
       GoOn=0
       return
    fi
+
+   MyCommand=$(command -v flask)
+   if [[ "$MyCommand" == "" ]]
+      then 
+      echo "Installing Flask"
+      sudo pip install flask 
+   fi
+
+   if [[ ! -e /steady/neeo-custom/.broadlink/Broadlink_Driver.py ]]
+      cd /steady/neeo-custom/.broadlink
+      echo "Downloading .META's Broadlink_driver"
+      curl https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta-Backend.sh -s -o Broadlink_Driver.py      
+   fi 
    popd >/dev/null
 
 
@@ -761,9 +758,9 @@ function Do_Setup_PM2()
    pm2 delete meta      2>/dev/null 1>/dev/null  # delete old startup entries
    pm2 delete node-red  2>/dev/null 1>/dev/null 
    pm2 delete mosquitto 2>/dev/null 1>/dev/null
-#   pm2 start mosquitto  -o "/dev/null" -e "/dev/null"  # we'll keep this one for later
- 
-   echo "And add latest startup versions to PM2"
+   pm2 delete Broadlink 2>/dev/null 1>/dev/null
+
+   echo "And add latest startup configuraton to PM2"
 
    pm2 start mosquitto -o /tmp/mosquitto-o -e /tmp/mosquitto-e
    if [[ "$?" != 0 ]]
@@ -792,6 +789,8 @@ function Do_Setup_PM2()
       GoOn=0
       return
    fi
+   FLASK_APP=/steady/neeo-custom/.broadlink/Broadlink_Driver.py pm2 start --name Broadlink '/usr/bin/flask run'
+
 
    popd >/dev/null
 
@@ -1056,7 +1055,7 @@ trap no_ctrlc SIGINT
 
      if [[ "$GoOn" == "1" ]]
         then 
-         echo "Starting State machine that will orchestrate installaton actions"
+         echo "Starting State machine that will orchestrate installation actions"
       RunMain 
       fi
    fi
