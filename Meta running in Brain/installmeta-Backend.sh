@@ -253,7 +253,7 @@ function Do_Setup_steady_directory_struct()
    fi 
 
    MyBashrc=$(cat ~/.bashrc | grep -i 'alias pm2_NEEO' ) # Did we already defoine the pm3_org alias to look at original pm2? 
-   if [[ "$MyBashrc" != "" ]]  # yes
+   if [[ "$MyBashrc" == "" ]]  # yes
       then
       echo "'alias pm2_NEEO='sudo PM2_HOME=/var/opt/pm2 pm2'" >> ~/.bashrc
    fi 
@@ -290,8 +290,8 @@ function SubFunction_Update_Pacman()
    # full system upgrade that is done above, will install new systemd-lib package. That package requires new content to nsswitch.conf 
    # If not done, allcdns-resolution fails (as we experienced from previous installations). The systemd-lib package adds the correct content
    # however, it saves it as a new file, users need to rename themselves, so, we're going to backup original one and bring the new content in place  
-   sudo /etc/nsswitch.conf  /etc/nsswitch.conf.pacsave           
-   sudo /etc/nsswitch.conf.pacnew  /etc/nsswitch.conf            
+   sudo cp /etc/nsswitch.conf  /etc/nsswitch.conf.pacsave           
+   sudo cp /etc/nsswitch.conf.pacnew  /etc/nsswitch.conf            
    # and downgrade systemd-package 
    #cd ~/safepackages
    #sudo pacman -U systemd*  --noconfirm --overwrite '/*' # will give: warning: downgrading package systemd-libs (247.2-1 => 246.6-1.1)
@@ -746,7 +746,7 @@ function Do_Setup_PM2()
    
    echo "Check if pm2-logrotate is enabled"
 
-   MyPM2=$(pm2 l|grep -i pm2-logrotate) 
+   MyPM2=$(pm2 l|grep -i 'pm2-logrotate') 
    if [[ "$MyPM2" == "" ]]                            # check if we have already logrotate in place
       then 
       pm2 install pm2-logrotate
