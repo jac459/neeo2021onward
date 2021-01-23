@@ -37,7 +37,7 @@ function RunMain()
    fi
 
    # beta MyURL="https://raw.githubusercontent.com/jac459/neeo2021onward/Beta-2021-01%232/Meta%20running%20in%20Brain/installmeta-Backend.sh"
-   MyURL='https://raw.githubusercontent.com/jac459/neeo2021onward/Beta-2021-01%233/Meta%20running%20in%20Brain/installmeta-Backend.sh'
+   MyURL='https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta-Backend.sh'
    sudo rm -r ~/installmeta-Backend.sh 2>/dev/null
    MyCurl=$(curl $MyURL -s -k -o ~/installmeta-Backend.sh)
    if [ "$?" -ne 0 ]
