@@ -790,7 +790,7 @@ function Do_Setup_PM2()
       GoOn=0
       return
    fi
-   FLASK_APP=/steady/neeo-custom/.broadlink/Broadlink_Driver.py pm2 start --name Broadlink python -- /usr/bin/flask run
+   FLASK_APP=/steady/neeo-custom/.broadlink/Broadlink_Driver.py pm2 start  -o /tmp/Broadlink-o -e /tmp/Broadlink-e  --name Broadlink python -- /usr/bin/flask run
 
 
    popd >/dev/null
