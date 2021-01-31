@@ -23,29 +23,13 @@ Statedir="/steady/.installer"
 Statefile="$Statedir/state"
 FoundStage=0
 VersionFile="$Statedir/version"
-LatestVersion=1.7
+LatestVersion=1.8
 InstalledVersion=1.0  # assume that the first installer ran before.
 Upgrade_requested=0
 UpgradeMetaOnly_requested="0"
 GoOn=1                # the main loop controller
 Determine_versions=0
 RetryCountPacman=10   # becasue of the instability of some archlinux repositories, url-error 502 might occur
-
-#Following table maintains the version where a new or changed functionality was AddedOrChanged; used to check if we need to execute an upgrade for a function  
-Function_0_AddedOrChanged=1.0
-Function_1_AddedOrChanged=1.0
-Function_2_AddedOrChanged=1.5
-Function_3_AddedOrChanged=1.0
-Function_4_AddedOrChanged=1.0
-Function_5_AddedOrChanged=1.0
-Function_6_AddedOrChanged=1.0
-Function_7_AddedOrChanged=1.0
-Function_8_AddedOrChanged=1.0
-Function_9_AddedOrChanged=1.0
-Function_A_AddedOrChanged=1.3
-Function_B_AddedOrChanged=1.3 
-Function_C_AddedOrChanged=1.5
-Function_X_AddedOrChanged=1.2
 
 # Following are the various stages that can be executed
 Exec_mount_root_stage=0
@@ -229,15 +213,19 @@ function Do_Setup_steady_directory_struct()
 #1  
    echo "Stage $Exec_setup_steady_stage: Setting up directories and rights"
 
+   sudo chown -R root:root  /steady                  # set rights correct for all directories we use with neeo and .meta 
+   sudo chown -R neeo:wheel /home/neeo               # set rights on homedir so we can write to it and by processes running as neeo: f.e. node-red 
+   sudo chown -R neeo:wheel  /steady/.installer/     # for keeping state and version.
    if [ ! -e /steady/neeo-custom ]
       then   
       sudo mkdir /steady/neeo-custom
       sudo chown neeo:wheel /steady/neeo-custom
       sudo chmod -R 775 /steady/neeo-custom
+   else
+      sudo chown -R neeo:wheel  /steady/neeo-custom/
    fi
    
-   sudo chown -R neeo:wheel /steady/neeo-custom
-   sudo chown -R neeo:wheel /home/neeo 
+
 
    MyBashrc=$(cat ~/.bashrc | grep -i '/steady/neeo-custom/.pm2/' ) # still old style chmods in .bashrc?
    if [[ "$MyBashrc" != "" ]]  # yes
@@ -246,6 +234,12 @@ function Do_Setup_steady_directory_struct()
       sed '/\/steady\/neeo-custom\/.pm2/d' .bashrc >~/bashrcx
       mv ~/.bashrc ~/.bashrc.old
       mv ~/bashrcx  ~/.bashrc
+   fi 
+
+   MyBashrc=$(cat ~/.bashrc | grep -i 'alias pm2_NEEO' ) # Did we already defoine the pm3_org alias to look at original pm2? 
+   if [[ "$MyBashrc" == "" ]]  # yes
+      then
+      echo "alias pm2_NEEO='sudo PM2_HOME=/var/opt/pm2 pm2'" >> ~/.bashrc
    fi 
 
 }
@@ -259,28 +253,36 @@ function SubFunction_Update_Pacman()
 
    # and as we found out, the package  systemd-libs (247.2-1 causes problems with HTTP(S) not resolving anymore, so let's install an earlier version of it (downgrade it) 
    pushd .  >/dev/null
-   if [[ -e ~/safepackages/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz ]]
-      then
-      echo "Saved package already downloaded"
-   else
-      mkdir ~/safepackages
-   	cd ~/safepackages
-      curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz' -o systemd-libs-246.6-1.1-armv7h.pkg.tar.xz
-   fi
+   #if [[ -e ~/safepackages/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz ]]
+   #   then
+   #   echo "Saved package already downloaded"
+   #else
+   #   mkdir ~/safepackages
+   #   cd ~/safepackages
+   #   curl -k 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/systemd-libs-246.6-1.1-armv7h.pkg.tar.xz' -o systemd-libs-246.6-1.1-armv7h.pkg.tar.xz
+   #fi
 
-   sudo pacman -Su pacman --noconfirm --force     # use old style pacman command
+   sudo pacman -Su pacman --noconfirm --force     # use old style pacman command (--force will be replaced by --overwrite with this update)
    if [[ ! "$?" == 0 ]]
        then 
        echo "Problems updating the system, run aborted"
        exit  
    fi
+
+   # okay, tricky part from the past. Is now solvesd quiote easily....
+
+   # full system upgrade that is done above, will install new systemd-lib package. That package requires new content to nsswitch.conf 
+   # If not done, allcdns-resolution fails (as we experienced from previous installations). The systemd-lib package adds the correct content
+   # however, it saves it as a new file, users need to rename themselves, so, we're going to backup original one and bring the new content in place  
+   sudo cp /etc/nsswitch.conf  /etc/nsswitch.conf.pacsave           
+   sudo cp /etc/nsswitch.conf.pacnew  /etc/nsswitch.conf            
    # and downgrade systemd-package 
-   cd ~/safepackages
-   sudo pacman -U systemd*  --noconfirm --overwrite '/*' # will give: warning: downgrading package systemd-libs (247.2-1 => 246.6-1.1)
+   #cd ~/safepackages
+   #sudo pacman -U systemd*  --noconfirm --overwrite '/*' # will give: warning: downgrading package systemd-libs (247.2-1 => 246.6-1.1)
 # and as we found out, the package  systemd-libs (247.2-1 causes problems with HTTP(S) not resolving anymore, so let's install an earlier version of it (downgrade it) 
 
-   cd ~
-   rm -r ~/safepackages
+   #cd ~
+   #rm -r ~/safepackages
 
    popd >/dev/null
 } 
@@ -444,7 +446,18 @@ function Do_Install_Meta()
        then 
       mkdir .meta
    fi
+   if [[ ! -e  "UserLibrary"  ]]
+       then 
+      mkdir UserLibrary
+   fi
+     if [[ ! -e  "Activated"  ]]
+       then 
+      mkdir Activated
+   fi
+
    cd .meta 
+
+
    npm install jac459/metadriver  --no-fund
    if [ "$?" -ne 0 ]
        then
@@ -667,6 +680,20 @@ function Do_install_broadlink()
       GoOn=0
       return
    fi
+
+   MyCommand=$(command -v flask)
+   if [[ "$MyCommand" == "" ]]
+      then 
+      echo "Installing Flask"
+      sudo pip install flask 
+   fi
+
+   if [[ ! -e /steady/neeo-custom/.broadlink/Broadlink_Driver.py ]]
+      then
+      cd /steady/neeo-custom/.broadlink
+      echo "Downloading .META's Broadlink_driver"
+      curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/Broadlink_Driver.py' -s -o Broadlink_Driver.py      
+   fi 
    popd >/dev/null
 
 
@@ -725,7 +752,7 @@ function Do_Setup_PM2()
    
    echo "Check if pm2-logrotate is enabled"
 
-   MyPM2=$(pm2 l|grep -i pm2-logrotate) 
+   MyPM2=$(pm2 l|grep -i 'pm2-logrotate') 
    if [[ "$MyPM2" == "" ]]                            # check if we have already logrotate in place
       then 
       pm2 install pm2-logrotate
@@ -740,9 +767,9 @@ function Do_Setup_PM2()
    pm2 delete meta      2>/dev/null 1>/dev/null  # delete old startup entries
    pm2 delete node-red  2>/dev/null 1>/dev/null 
    pm2 delete mosquitto 2>/dev/null 1>/dev/null
-#   pm2 start mosquitto  -o "/dev/null" -e "/dev/null"  # we'll keep this one for later
- 
-   echo "And add latest startup versions to PM2"
+   pm2 delete Broadlink 2>/dev/null 1>/dev/null
+
+   echo "And add latest startup configuraton to PM2"
 
    pm2 start mosquitto -o /tmp/mosquitto-o -e /tmp/mosquitto-e
    if [[ "$?" != 0 ]]
@@ -771,6 +798,8 @@ function Do_Setup_PM2()
       GoOn=0
       return
    fi
+   FLASK_APP=/steady/neeo-custom/.broadlink/Broadlink_Driver.py pm2 start  -o /tmp/Broadlink-o -e /tmp/Broadlink-e  --name Broadlink python -- /usr/bin/flask run
+
 
    popd >/dev/null
 
@@ -1035,7 +1064,7 @@ trap no_ctrlc SIGINT
 
      if [[ "$GoOn" == "1" ]]
         then 
-         echo "Starting State machine that will orchestrate installaton actions"
+         echo "Starting State machine that will orchestrate installation actions"
       RunMain 
       fi
    fi
