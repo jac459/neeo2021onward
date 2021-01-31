@@ -23,7 +23,7 @@ Statedir="/steady/.installer"
 Statefile="$Statedir/state"
 FoundStage=0
 VersionFile="$Statedir/version"
-LatestVersion=1.71b
+LatestVersion=1.8
 InstalledVersion=1.0  # assume that the first installer ran before.
 Upgrade_requested=0
 UpgradeMetaOnly_requested="0"
@@ -446,7 +446,18 @@ function Do_Install_Meta()
        then 
       mkdir .meta
    fi
+   if [[ ! -e  "UserLibrary"  ]]
+       then 
+      mkdir UserLibrary
+   fi
+     if [[ ! -e  "Activated"  ]]
+       then 
+      mkdir Activated
+   fi
+
    cd .meta 
+
+
    npm install jac459/metadriver  --no-fund
    if [ "$?" -ne 0 ]
        then
