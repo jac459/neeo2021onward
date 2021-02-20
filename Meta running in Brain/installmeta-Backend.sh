@@ -27,6 +27,7 @@ LatestVersion=1.8
 InstalledVersion=1.0  # assume that the first installer ran before.
 Upgrade_requested=0
 UpgradeMetaOnly_requested="0"
+CheckAndUpdateAll_requested="0"
 GoOn=1                # the main loop controller
 Determine_versions=0
 RetryCountPacman=10   # becasue of the instability of some archlinux repositories, url-error 502 might occur
@@ -171,8 +172,11 @@ Do_Version_Check()
 
    export InfoString="Last version: $LastVersion -  Installed version: $MyVersion"
    echo $InfoString
-   
-   return
+   if [[ "$LastVersion" == "$MyVersion" ]] # Already at the latest level
+      return 0
+   else
+      return 1
+
 }
 function Do_Mount_root()
 {
@@ -975,7 +979,19 @@ function Do_Check_Last_Run()
    fi
 
 }
+function DoCheckAndUpdateAll()
+#This is a special routine, handling he reuest to check if a new version of metadriver is availalble and if so,
+#     update the entire environment (including meta).
+{
+   if [[ !Do_Version_Check ]]    # DID the routine indicate that there is a new version?
+      then                       # No, we are up to par already
+      return 0                   # signal that there is no need to continue with updating
+   else
+      Do_Reset                   # Reset starting point of activity, so that we will run full installer 
+      return 1                   # signal that we want to continue with update (State-machine will pickup further)    
+}
 
+}
 function RunMain()
 {
 #This is the main routine, it handles the logic after init is done
@@ -1035,7 +1051,10 @@ trap no_ctrlc SIGINT
         Do_Install_Meta                 # update meta
         Do_Setup_PM2                    # stop and start meta in pm2 to getr the new version.
         GoOn=0 
-        ;;        
+        ;; 
+      --CheckAndUpdateAll)
+        GoOn = DoCheckAndUpdateAll()
+        ;;                
       --get-versions)
         Do_Version_Check
         GoOn=0
