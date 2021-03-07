@@ -986,7 +986,8 @@ function DoCheckAndUpdateAll()
 #This is a special routine, handling he reuest to check if a new version of metadriver is availalble and if so,
 #     update the entire environment (including meta).
 {
-   if [[ !Do_Version_Check ]]    # DID the routine indicate that there is a new version?
+   Do_Version_Check
+   if [[ !$? ]]    # DID the routine indicate that there is a new version?
       then                       # No, we are up to par already
       return 0                   # signal that there is no need to continue with updating
    else
@@ -1056,7 +1057,8 @@ trap no_ctrlc SIGINT
         GoOn=0 
         ;; 
       --CheckAndUpdateAll)
-        GoOn = DoCheckAndUpdateAll()
+        DoCheckAndUpdateAll
+        GoOn=0
         ;;                
       --get-versions)
         Do_Version_Check
