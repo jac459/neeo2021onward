@@ -993,7 +993,6 @@ function DoCheckAndUpdateAll()
       Do_Reset                   # Reset starting point of activity, so that we will run full installer 
       return 1                   # signal that we want to continue with update (State-machine will pickup further)  
    fi  
-}
 
 }
 function RunMain()
