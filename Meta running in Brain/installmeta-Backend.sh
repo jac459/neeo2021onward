@@ -78,6 +78,7 @@ Options:
   --reset           Start installer from scratch)
   --meta-only       Only pull a new version of metadriver, and restart it
   --get-versions    Output current version of meta and the last available one
+  --CheckAndUpdateAll Run update from start if a new version of meta is available, otherwise just exit 
   --FreeSpace       Run a cleanup of logfiles opn /steady/neeo-custom directory that might fill up /steady filesystem
 EOL
 }
@@ -990,7 +991,8 @@ function DoCheckAndUpdateAll()
       return 0                   # signal that there is no need to continue with updating
    else
       Do_Reset                   # Reset starting point of activity, so that we will run full installer 
-      return 1                   # signal that we want to continue with update (State-machine will pickup further)    
+      return 1                   # signal that we want to continue with update (State-machine will pickup further)  
+   fi  
 }
 
 }
