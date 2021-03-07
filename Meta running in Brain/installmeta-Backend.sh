@@ -173,9 +173,11 @@ Do_Version_Check()
    export InfoString="Last version: $LastVersion -  Installed version: $MyVersion"
    echo $InfoString
    if [[ "$LastVersion" == "$MyVersion" ]] # Already at the latest level
+      then 
       return 0
    else
       return 1
+   fi 
 
 }
 function Do_Mount_root()
