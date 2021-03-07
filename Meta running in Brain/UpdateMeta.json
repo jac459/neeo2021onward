@@ -1,0 +1,29 @@
+{   "name":"UpdateMeta",
+   "manufacturer":"TonO",
+   "type":"ACCESSORY",
+   "version":1,
+    "switches":{
+      "Learn" : {"label":"Thumbnails", "listen":"ShowThumbnail", 
+       "evalwrite":[{"variable":"ShowThumbnail", "value":"DYNAMIK (\"$ShowThumbnail\" == \"true\") ? \"false\":\"true\""}]}
+    }, 
+    "variables":{
+        "TheResult":""
+    },
+   "buttons":{          
+        "POWER ON":  
+            {"label":"",            
+            "type":"cli", "command":"sh ~/installBeta.sh --get-versions","queryresult":"/(?<=Last version:).*/gm",
+            "evalwrite":[
+                {"variable":"TheResult", "value":"$Result"}
+            ]
+            },
+        "POWER OFF":  
+            {"label":"",                                 
+           "type":"static",
+           "command":"",
+           "evalwrite":[
+            {"variable":"TheResult", "value":"Done"}
+            ]
+            }
+    }
+}   
