@@ -79,6 +79,7 @@ Options:
   --meta-only       Only pull a new version of metadriver, and restart it
   --get-versions    Output current version of meta and the last available one
   --CheckAndUpdateAll Run update from start if a new version of meta is available, otherwise just exit 
+  --CheckAndUpdateReboot Run update from start if a new version of meta is available, always reboot afterwards 
   --FreeSpace       Run a cleanup of logfiles opn /steady/neeo-custom directory that might fill up /steady filesystem
 EOL
 }
@@ -982,6 +983,14 @@ function Do_Check_Last_Run()
    fi
 
 }
+function DoCheckAndUpdateReboot()
+#This is a special routine, handling he reuest to check if a new version of metadriver is availalble and if so,
+#     update the entire environment (including meta).
+# It allways reboots once done.
+{
+   DoCheckAndUpdateAll
+   sudo reboot 
+}
 function DoCheckAndUpdateAll()
 #This is a special routine, handling he reuest to check if a new version of metadriver is availalble and if so,
 #     update the entire environment (including meta).
@@ -1059,7 +1068,12 @@ trap no_ctrlc SIGINT
       --CheckAndUpdateAll)
         DoCheckAndUpdateAll
         GoOn=0
-        ;;                
+        ;; 
+         --CheckAndUpdateReboot)
+        DoCheckAndUpdateReboot
+        GoOn=0
+        ;;       
+                 
       --get-versions)
         Do_Version_Check
         GoOn=0
