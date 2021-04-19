@@ -1,0 +1,87 @@
+{   "name":"UpdateMeta",
+   "manufacturer":"TonO",
+   "type":"RADIO",
+   "version":1,
+    "variables":{
+        "TheResult":""
+    },
+    "labels": {
+        "Message": {"label": "","listen": "MESSAGE"}
+    },
+
+    "variables":{
+        "MESSAGE":""
+    },
+   "buttons":{
+        "List versions":
+            {"label":"",
+            "type":"static", "command":"",
+            "evalwrite":[{"variable":"MESSAGE", "value":"Getting versions, please wait"}],
+            "evaldo":[{"test":true,"then":"__LIST","or":""}]
+            },
+        "__LIST":
+            {"label":"",
+            "type":"cli", "command":"sh ~/installBeta.sh --get-versions","queryresult":"$.*",
+            "evalwrite":[{"variable":"MESSAGE", "value":"$Result"}]
+            },            
+        "Update version":
+            {"label":"",
+            "type":"static", "command":"",
+            "evalwrite":[{"variable":"MESSAGE", "value":"Always update started; see 'pm2 log meta' for progress"}],
+            "evaldo":[{"test":true,"then":"__UPDATE","or":""}]
+            },
+        "__UPDATE":
+            {"label":"",
+            "type":"cli", "command":"sh ~/installBeta.sh --reset", 
+            "evalwrite":[{"variable":"MESSAGE", "value":"installBeta.sh started"}]
+            },
+        "Reload drivers":
+            {"label":"",
+            "type":"mqtt", "command":"{\"topic\":\"meta/.meta/Reload\",\"message\":\"meta\"}",
+            "evalwrite":[{"variable":"MESSAGE", "value":"Reload requested; see 'pm2 log meta' for progress"}]
+            },
+        "Restart meta":
+            {"label":"",
+            "type":"cli", "command":"pm2 restart meta",
+            "evalwrite":[{"variable":"MESSAGE", "value":"Restart meta requested; see 'pm2 log meta' for progress"}]
+
+            },
+        "Restart entire brain":
+            {"label":"",
+            "type":"cli", "command":"sudo reboot",
+            "evalwrite":[{"variable":"MESSAGE", "value":"Brain reboot in progress requested; see 'pm2 log meta' for progress"}]
+            },
+        "Check and update":
+            {"label":"",
+                        "type":"static", "command":"",
+            "evalwrite":[{"variable":"MESSAGE", "value":"Checking for new versions, please wait"}],
+            "evaldo":[{"test":true,"then":"__CHECKANDUPDATE","or":""}]
+            },
+        "__CHECKANDUPDATE":
+            {"label":"",
+            "type":"cli", "command":"sh ~/installBeta.sh --CheckAndUpdateAll","queryresult":"/(?<=Last version:).*/gm",
+            "evalwrite":[{"variable":"MESSAGE", "value":"$Result"}]
+            },
+        "Check,update,reboot":
+            {"label":"",
+                "type":"static", "command":"",
+            "evalwrite":[{"variable":"MESSAGE", "value":"Checking for new versions, wait till Brain has rebooted"}],
+            "evaldo":[{"test":true,"then":"__CHECKUPDATEREBOOT","or":""}]
+            },
+        "__CHECKUPDATEREBOOT":
+            {"label":"",
+            "type":"cli", "command":"sh ~/installBeta.sh --CheckAndUpdateReboot","queryresult":"/(?<=Last version:).*/gm",
+            "evalwrite":[{"variable":"MESSAGE", "value":"$Result"}]
+            },
+        "POWER ON":
+            {"label":"",
+           "type":"static",
+           "command":""
+        },
+        "POWER OFF":
+            {"label":"",
+           "type":"static",
+           "command":""
+        	}
+    }
+}
