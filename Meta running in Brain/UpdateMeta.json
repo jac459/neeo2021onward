@@ -18,7 +18,7 @@
             },
         "__LIST":
             {"label":"",
-            "type":"cli", "command":"sh ~/installBeta.sh --get-versions","queryresult":"/(?<=Last version:).*/gm"
+            "type":"cli", "command":"sh ~/installBeta.sh --get-versions","queryresult":"/(?<=Last version:).*/gm",
             "evalwrite":[{"variable":"MESSAGE", "value":"$Result"}]
             },            
         "Update version":
