@@ -30,7 +30,7 @@ function RunMain()
 #  Its main purpose is to load the actual backend-code and run it. 
    MyName="installmeta.sh"
    pushd . >/dev/null
-   if [[ ( "$MyPath"  == "/tmp/$MyName") || (! -e ~/installmetash) ]] 
+   if [[ ( "$MyPath"  == "/tmp/$MyName") || (! -e ~/$MyName) ]] 
       then
       echo "Copying installmeta.sh to homedir ($HOME) for future use"
       cp $BASH_SOURCE ~

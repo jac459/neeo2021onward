@@ -163,10 +163,11 @@ def _xmitGC():
     dev.send_data(SendThis)
     return 'OK'
 
+@app.route('/GCToBroad', methods=['GET','POST'])
 def ConvertBroadtoGC(Stream):
-
+    print("Broadlink_Driver: Conversion GC to Broadlink  requested")
     # Now convert the Global Cache format to our format
-    ConvData = Convert_Broadlink_to_GC(Stream)    
+    ConvData = Convert_GC_to_Broadlink(Stream)    
     print("Broadlink_Driver: Conversion done, returning this data", ConvData)
     #SendThis = bytearray.fromhex(ConvData)
     SendThis = ConvData    
