@@ -8,13 +8,6 @@ import math
 from broadlink.exceptions import ReadError, StorageError
 from flask import request
 
-# Files for ADB_Shell commands: over network
-from adb_shell.adb_device import AdbDeviceTcp, AdbDeviceUsb
-from adb_shell.auth.sign_pythonrsa import PythonRSASigner
-import logging
-
-logging.getLogger().setLevel(logging.DEBUG)
-
 TIMEOUT = 30  # Timeout for learn
 TICK = 32.84
 
@@ -129,33 +122,6 @@ def Connect_Broadlink():
    print('dev=',dev)
    return dev
 
-
-def Connect_ADB():
-
-   host = request.args.get('host')
-   print("ADB_Driver: host:",host)
-   ADBdevice = AdbDeviceTcp(host, 5555, default_transport_timeout_s=9.)
-   ADBdevice.connect(auth_timeout_s=5)
-   return ADBdevice
-
-## Load the public and private keys
-#adbkey = 'path/to/adbkey'
-#with open(adbkey) as f:
-#    priv = f.read()
-# with open(adbkey + '.pub') as f:
-#     pub = f.read()
-#signer = PythonRSASigner(pub, priv)
-
-
-def Send_ADB(ADBdevice):
-       # Send a shell command
-   Command = request.args.get('command')
-   AsRoot = request.args.get('root',default='')
-   if AsRoot == 'yes':  
-      Response = ADBdevice.root()
-   Response = ADBdevice.shell(Command)
-   return Response
-
 app = Flask(__name__)
 
 @app.route('/')
@@ -169,15 +135,6 @@ def quit():
     shutdown_server()
     return 'Server shutting down...'    
   
-@app.route('/adb',  methods=['GET','POST'])
-def _adb():
-    print("ADB_Driver:")
-    ADBDevice = Connect_ADB()  
-    print("ADB_Driver: Connection to device succeeded")
-    Response = Send_ADB(ADBDevice)
-    return Response 
-
-
 @app.route('/xmit',  methods=['GET','POST'])
 def _xmit():
     print("Broadlink_Driver: xmit-request")
@@ -255,9 +212,3 @@ def _rcveGC():
     Learned=_rcve()
     return ConvertBroadtoGC(Learned)
 
-def main():
-    app.run(host='0.0.0.0', port=5000)
-
-        
-if __name__ == '__main__':
-    main()
