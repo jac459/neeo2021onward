@@ -938,7 +938,7 @@ function Do_Setup_PM2()
    fi 
 
    cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
-   pm2 start --name meta meta.js  -o /tmp/meta-o -e /tmp/meta-e --  '{"Brain":"localhost","LogSeverity":"WARNING","Components":["meta"]}'
+   pm2 start --name meta meta.js  -o /tmp/meta-o -e /tmp/meta-e --  '{"Brain":"localhost","LogSeverity":"ERROR"}'
 
    
    if [[ "$?" != 0 ]]
