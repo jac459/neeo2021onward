@@ -503,13 +503,13 @@ function Do_Install_Meta()
    echo "Stage $Exec_install_meta: installing Metadriver (JAC459/metadriver)"
    pushd .  >/dev/null
    cd /steady/neeo-custom/ 
-   if [[ ! -e  ".meta"  ]]   // meta  not yet installed, do a normal install first
+   if [[ ! -e  ".meta"  ]]   # meta  not yet installed, do a normal install first
        then 
       Do_Normal_Install_Meta
    fi
    echo "Stage $Exec_install_meta: Now that meta and all dependencies are installed, simply copy the beta meta-package in"
 
-   git clone  --branch Beta https://github.com/jac459/metadriver  /tmp/metadriver-beta // Now pull beta-files
+   git clone  --branch Beta https://github.com/jac459/metadriver  /tmp/metadriver-beta # Now pull beta-files
    cp  -r  /tmp/metadriver-beta/* /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
    sudo rm -rf /tmp/metadriver-beta
 
@@ -739,14 +739,14 @@ function Do_install_broadlink()
    if [[ ! -e /steady/neeo-custom/.broadlink/Broadlink_Driver.py ]]
       then
       cd /steady/neeo-custom/.broadlink
-      echo "Downloading .META's Broadlink_driver"  // Please note, we are not using this anymore...... its now part of meta-package (PythonManager.py)
+      echo "Downloading .META's Broadlink_driver"  # Please note, we are not using this anymore...... its now part of meta-package (PythonManager.py)
       curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/Beta-2021-01%233/Meta%20running%20in%20Brain/Broadlink_Driver.py' -s -o Broadlink_Driver.py      
    fi 
    popd >/dev/null
 
 
 }
-sudo pip install adb_shell
+
 function Do_install_ADB()
 {
 #D
