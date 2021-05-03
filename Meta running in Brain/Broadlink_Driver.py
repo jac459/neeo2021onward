@@ -153,8 +153,17 @@ def Send_ADB(ADBdevice):
    AsRoot = request.args.get('root',default='')
    if AsRoot == 'yes':  
       Response = ADBdevice.root()
+   print("Command is:",Command)
    Response = ADBdevice.shell(Command)
-   return Response
+   if Response is None:
+      return {}
+
+   Response = Response.strip().split("\r\n")
+   retcode = Response[-1]
+   output = "\n".join(Response[:-1])
+
+   return {"retcode": retcode, "output": output}
+   #return Response
 
 app = Flask(__name__)
 
