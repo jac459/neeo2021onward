@@ -746,6 +746,65 @@ function Do_install_broadlink()
 
 
 }
+sudo pip install adb_shell
+function Do_install_ADB()
+{
+#D
+   echo "Stage $Exec_install_broadlink : add ADB support"
+   NextStep=$Exec_setup_pm2
+
+   pushd . >/dev/null
+   if [[ ! -e /steady/neeo-custom/.broadlink ]]
+      then 
+      cd /steady/neeo-custom
+      if [[ ! -e ".broadlink" ]]
+         then
+         mkdir .broadlink
+      fi
+      cd .broadlink
+   fi
+
+   if [[ ! -e /steady/neeo-custom/.broadlink/python-broadlink/setup.py ]]
+      then
+      git clone https://github.com/mjg59/python-broadlink
+      if [ "$?" -ne 0 ]
+         then
+            echo 'Error occured during download of broadlink - retrying'
+            popd >/dev/null
+            GoOn=0
+            return
+      fi
+   fi 
+
+   # next step will Always install broadlink driver, even if it is there already... just too much uncertainty where to check if it is already installed  
+   cd /steady/neeo-custom/.broadlink/python-broadlink 
+   sudo python setup.py install
+   if [ "$?" -ne 0 ]
+      then
+      popd >/dev/null
+      echo 'Error occured during Install of broadlink support'
+      GoOn=0
+      return
+   fi
+
+   MyCommand=$(command -v flask)
+   if [[ "$MyCommand" == "" ]]
+      then 
+      echo "Installing Flask"
+      sudo pip install flask 
+   fi
+
+   if [[ ! -e /steady/neeo-custom/.broadlink/Broadlink_Driver.py ]]
+      then
+      cd /steady/neeo-custom/.broadlink
+      echo "Downloading .META's Broadlink_driver"
+      curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/Broadlink_Driver.py' -s -o Broadlink_Driver.py      
+   fi 
+   popd >/dev/null
+
+
+}
+
 
 function Do_install_ADB()
 {
