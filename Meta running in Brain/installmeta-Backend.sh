@@ -39,6 +39,7 @@ Exec_reset_pacman=2
 Exec_install_nvm=3
 Exec_finish_nvm=4
 Exec_install_git=5
+Exec_remove_betafiles=5x
 Exec_install_meta=6
 Exec_install_mosquitto=7
 Exec_install_nodered=8
@@ -46,6 +47,8 @@ Exec_backup_solution=9
 Exec_install_jq=A
 Exec_install_python=B
 Exec_install_broadlink=C
+Exec_install_ADB=D
+
 Exec_setup_pm2=X 
 Exec_all_stages=0
 Exec_finish=Y 
@@ -443,12 +446,26 @@ function Do_Install_Git()
 
 }
 
-function Do_Install_Meta()
+function Do_Remove_older_Beta()
 {
-#6
-   echo "Stage $Exec_install_meta: installing Metadriver (JAC459/metadriver)"
+#5x
+   echo "Stage $Exec_remove_betafiles: Removing old, incorrect beta-files"
+   pushd .  >/dev/null
+   cd /steady/neeo-custom/ 
 
-  pushd .  >/dev/null
+   if [[  -e  ".broadlink"  ]]
+      then 
+      sudo rkdir -r ".broadlink" 
+   fi
+
+   popd >/dev/null 
+}
+function Do_Normal_Install_Meta()
+{
+#6 
+   echo "Stage $Exec_install_meta: installing normal (master) Metadriver first"
+
+   pushd .  >/dev/null
    cd /steady/neeo-custom/ 
    if [[ ! -e  ".meta"  ]]
        then 
@@ -477,6 +494,26 @@ function Do_Install_Meta()
    popd >/dev/null 
 
 
+}
+
+
+function Do_Install_Meta()
+{
+#6
+   echo "Stage $Exec_install_meta: installing Metadriver (JAC459/metadriver)"
+   pushd .  >/dev/null
+   cd /steady/neeo-custom/ 
+   if [[ ! -e  ".meta"  ]]   # meta  not yet installed, do a normal install first
+       then 
+      Do_Normal_Install_Meta
+   fi
+   echo "Stage $Exec_install_meta: Now that meta and all dependencies are installed, simply copy the beta meta-package in"
+
+   git clone  --branch Beta https://github.com/jac459/metadriver  /tmp/metadriver-beta # Now pull beta-files
+   cp  -r  /tmp/metadriver-beta/* /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
+   sudo rm -rf /tmp/metadriver-beta
+
+   popd >/dev/null 
 
 }
 
@@ -653,7 +690,6 @@ function Do_install_broadlink()
 {
 #C
    echo "Stage $Exec_install_broadlink : add broadlink support"
-   NextStep=$Exec_setup_pm2
 
    pushd . >/dev/null
    if [[ ! -e /steady/neeo-custom/.broadlink ]]
@@ -699,11 +735,50 @@ function Do_install_broadlink()
    if [[ ! -e /steady/neeo-custom/.broadlink/Broadlink_Driver.py ]]
       then
       cd /steady/neeo-custom/.broadlink
-      echo "Downloading .META's Broadlink_driver"
-      curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/Broadlink_Driver.py' -s -o Broadlink_Driver.py      
+      echo "Downloading .META's Broadlink_driver"  # Please note, we are not using this anymore...... its now part of meta-package (PythonManager.py)
+      curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/Beta-2021-01%233/Meta%20running%20in%20Brain/Broadlink_Driver.py' -s -o Broadlink_Driver.py      
    fi 
    popd >/dev/null
 
+
+}
+
+
+function Do_install_ADB()
+{
+#D
+   echo "Stage $Exec_install_ADB : add support FOR ADB"
+
+   MyADB=$(sudo pip list | grep -i 'adb-shell   ')
+   if [[ "$MyADB" == "" ]]
+      then 
+      echo "Installing ADB"
+      sudo pip install adb_shell 
+   fi
+   
+   if [ "$?" -ne 0 ]
+      then
+      popd >/dev/null
+      echo 'Error occured during Install of ADB support'
+      GoOn=0
+      return
+   fi
+### Next step installs WEBSOCKETS package (WS-server for python); this is needed for python_controller. 
+### Commented out because the driver is now back to native HTTP-requests 
+#   MyPyWS=$(sudo pip list | grep -i 'websockets ')
+#   if [[ "$MyPyWS" == "" ]]
+#      then 
+#      echo "Installing Python-websockets"
+#      sudo pip install websockets 
+#   fi
+#   
+#   if [ "$?" -ne 0 ]
+#      then
+#      popd >/dev/null
+#      echo 'Error occured during Install of Python websockets for ADB support'
+#      GoOn=0
+#      return
+#   fi
 
 }
 
@@ -725,6 +800,9 @@ function SubFunction_Remove_Old_PM2()
    echo "Stage $Exec_setup_pm2: Done removing older versions of PM2"
 
 }
+
+
+
 
 
 function Do_Setup_PM2()
@@ -776,6 +854,7 @@ function Do_Setup_PM2()
    pm2 delete node-red  2>/dev/null 1>/dev/null 
    pm2 delete mosquitto 2>/dev/null 1>/dev/null
    pm2 delete Broadlink 2>/dev/null 1>/dev/null
+   pm2 delete PythonManager 2>/dev/null 1>/dev/null
 
    echo "And add latest startup configuraton to PM2"
 
@@ -797,7 +876,7 @@ function Do_Setup_PM2()
    fi 
 
    cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
-   pm2 start --name meta meta.js  -o /tmp/meta-o -e /tmp/meta-e --  '{"Brain":"localhost","LogSeverity":"WARNING","Components":["meta"]}'
+   pm2 start --name meta meta.js  -o /tmp/meta-o -e /tmp/meta-e --  '{"Brain":"localhost","LogSeverity":"ERROR"}'
 
    
    if [[ "$?" != 0 ]]
@@ -806,7 +885,7 @@ function Do_Setup_PM2()
       GoOn=0
       return
    fi
-   FLASK_APP=/steady/neeo-custom/.broadlink/Broadlink_Driver.py pm2 start  -o /tmp/Broadlink-o -e /tmp/Broadlink-e  --name Broadlink python -- /usr/bin/flask run
+   pm2 start  -o /tmp/PythonManager-o -e /tmp/PythonManager-e  --name PythonManager python -- /steady/neeo-custom/.meta/node_modules/@jac459/metadriver/PythonManager.py
 
 
    popd >/dev/null
@@ -912,6 +991,10 @@ function    Do_State_Machine()
           ;;
           $Exec_install_git)
              Do_Install_Git
+             Do_SetNextStage $Exec_remove_betafiles
+          ;;
+          $Exec_remove_betafiles)
+             Do_Remove_older_Beta 
              Do_SetNextStage $Exec_install_meta
           ;;
           $Exec_install_meta)
@@ -940,8 +1023,12 @@ function    Do_State_Machine()
           ;;
           $Exec_install_broadlink)
              Do_install_broadlink
-             Do_SetNextStage $Exec_setup_pm2
+             Do_SetNextStage $Exec_install_ADB
           ;;
+          $Exec_install_ADB)
+             Do_install_ADB
+             Do_SetNextStage $Exec_setup_pm2
+          ;;          
           $Exec_setup_pm2)
              Do_Setup_PM2
              Do_SetNextStage $Exec_finish
@@ -1103,6 +1190,8 @@ trap no_ctrlc SIGINT
      if [[ "$GoOn" == "1" ]]
         then 
          echo "Starting State machine that will orchestrate installation actions"
-      RunMain 
+      #RunMain
+      whiptail --title "Example Dialog" --msgbox "This is an example of a message box. You must hit OK to continue." 8 78
+ 
       fi
    fi

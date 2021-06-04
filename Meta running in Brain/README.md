@@ -8,6 +8,9 @@ Then execute these commands:
 
   curl -k https://raw.githubusercontent.com/jac459/neeo2021onward/main/Meta%20running%20in%20Brain/installmeta.sh -o /tmp/installmeta.sh && sh /tmp/installmeta.sh 
 
+  ( for the Beta-version, use these commands:
+  curl -k https://raw.githubusercontent.com/jac459/neeo2021onward/Beta-2021-01%233/Meta%20running%20in%20Brain/installBeta.sh -o /tmp/installBeta.sh && sh /tmp/installBeta.sh 
+
 ## What happens here?
 1) This will download a small (driver-) program from github to a writable temporary folder.
 2) This executes the driver program.
