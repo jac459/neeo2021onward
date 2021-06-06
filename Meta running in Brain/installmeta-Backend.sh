@@ -1190,8 +1190,8 @@ trap no_ctrlc SIGINT
      if [[ "$GoOn" == "1" ]]
         then 
          echo "Starting State machine that will orchestrate installation actions"
-      #RunMain
-      whiptail --title "Example Dialog" --msgbox "This is an example of a message box. You must hit OK to continue." 8 78
+      RunMain
+      #whiptail --title "Example Dialog" --msgbox "This is an example of a message box. You must hit OK to continue." 8 78
  
       fi
    fi
