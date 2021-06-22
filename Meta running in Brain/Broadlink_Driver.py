@@ -15,8 +15,28 @@ import logging
 
 logging.getLogger().setLevel(logging.DEBUG)
 
+logger = logging.getLogger('websockets')
+logger.setLevel(logging.INFO)
+
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+
+# add formatter to ch
+ch.setFormatter(formatter)
+
+# add ch to logger
+logger.addHandler(ch)
+
+
 TIMEOUT = 30  # Timeout for learn
 TICK = 32.84
+ConnectedHosts = []
+ADBHostList = {}
+ADBDevice = ""
 
 ### Full credits need to go to Felipe Diel / MJG59 for his EXCELLENT Broadlink driver. 
 # A lot of code in this program was inspired or even obtained from hs fgithub site: https://github.com/mjg59/python-broadlink
@@ -131,39 +151,52 @@ def Connect_Broadlink():
 
 
 def Connect_ADB():
+    global ADBDevice
+    host = request.args.get('host')
+    print("ADB_Driver: host:",host)
+    logger.info("ADB_Driver: connecting to host: "+host)
+    try:                                            # Checking if we are already connected.
+       ADBDevice = ADBHostList[host]["ADBSocket"]       
+       return 
+    except:
+        logger.info("Setting up connection ADB with "+host)
 
-   host = request.args.get('host')
-   print("ADB_Driver: host:",host)
-   ADBdevice = AdbDeviceTcp(host, 5555, default_transport_timeout_s=9.)
-   ADBdevice.connect(auth_timeout_s=5)
-   return ADBdevice
+    ADBDevice = AdbDeviceTcp(host, 5555, default_transport_timeout_s=5.)
+    ## Load the public and private keys so we can connect to Android and authenticate ourself (also for future use) 
+    adbkey = '/home/neeo/ADB_Shell_key'
+    with open(adbkey) as f:
+        priv = f.read()
 
-## Load the public and private keys
-#adbkey = 'path/to/adbkey'
-#with open(adbkey) as f:
-#    priv = f.read()
-# with open(adbkey + '.pub') as f:
-#     pub = f.read()
-#signer = PythonRSASigner(pub, priv)
+    with open(adbkey + '.pub') as f:
+        pub = f.read()
+    signer = PythonRSASigner(pub, priv)
 
+    ADBDevice.connect(rsa_keys=[signer],auth_timeout_s=5)
 
-def Send_ADB(ADBdevice):
-       # Send a shell command
-   Command = request.args.get('command')
-   AsRoot = request.args.get('root',default='')
-   if AsRoot == 'yes':  
-      Response = ADBdevice.root()
-   print("Command is:",Command)
-   Response = ADBdevice.shell(Command)
-   if Response is None:
-      return {}
+    ADBHostList.setdefault(host, {})["ADBSocket"] = ADBDevice
+    logger.info("Hostlist is now ")
+    logger.info(ADBHostList)
+    return
 
-   Response = Response.strip().split("\r\n")
-   retcode = Response[-1]
-   output = "\n".join(Response[:-1])
+def Send_ADB():
+    global ADBDevice
+    logger.info(ADBDevice)
+    # Send a shell command
+    Command = request.args.get('command')
+    AsRoot = request.args.get('root',default='')
+    if AsRoot == 'yes':  
+        Response = ADBDevice.root()
+    print("Command is:",Command)
+    Response = ADBDevice.shell(Command)
+    if Response is None:
+        return {}
 
-   return {"retcode": retcode, "output": output}
-   #return Response
+    Response = Response.strip().split("\r\n")
+    retcode = Response[-1]
+    output = "\n".join(Response[:-1])
+
+    return {"retcode": retcode, "output": output}
+    #return Response
 
 app = Flask(__name__)
 
@@ -183,7 +216,7 @@ def _adb():
     print("ADB_Driver:")
     ADBDevice = Connect_ADB()  
     print("ADB_Driver: Connection to device succeeded")
-    Response = Send_ADB(ADBDevice)
+    Response = Send_ADB()
     return Response 
 
 
