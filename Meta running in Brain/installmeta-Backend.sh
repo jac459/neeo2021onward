@@ -455,7 +455,7 @@ function Do_Remove_older_Beta()
 
    if [[  -e  ".broadlink"  ]]
       then 
-      sudo rkdir -r ".broadlink" 
+      sudo rmdir -r ".broadlink" 
    fi
 
    popd >/dev/null 
@@ -463,7 +463,7 @@ function Do_Remove_older_Beta()
 function Do_Normal_Install_Meta()
 {
 #6 
-   echo "Stage $Exec_install_meta: installing normal (master) Metadriver first"
+   echo "Stage $Exec_install_meta: installing normal (master) Meta first"
 
    pushd .  >/dev/null
    cd /steady/neeo-custom/ 
@@ -479,11 +479,13 @@ function Do_Normal_Install_Meta()
        then 
       mkdir Activated
    fi
-
+   
    cd .meta 
+   git clone https://github.com/jac459/meta /tmp/meta-install 
+   cp -r /tmp/meta-install/* .
+   rm -r /tmp/meta-install
+   nopm install 
 
-
-   npm install jac459/metadriver  --no-fund
    if [ "$?" -ne 0 ]
        then
         echo 'Install of metadriver failed'
@@ -500,7 +502,7 @@ function Do_Normal_Install_Meta()
 function Do_Install_Meta()
 {
 #6
-   echo "Stage $Exec_install_meta: installing Metadriver (JAC459/metadriver)"
+   echo "Stage $Exec_install_meta: installing Meta (JAC459/meta)"
    pushd .  >/dev/null
    cd /steady/neeo-custom/ 
    if [[ ! -e  ".meta"  ]]   # meta  not yet installed, do a normal install first
@@ -509,8 +511,8 @@ function Do_Install_Meta()
    fi
    echo "Stage $Exec_install_meta: Now that meta and all dependencies are installed, simply copy the beta meta-package in"
 
-   git clone  --branch Beta https://github.com/jac459/metadriver  /tmp/metadriver-beta # Now pull beta-files
-   cp  -r  /tmp/metadriver-beta/* /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
+   git clone  --branch Beta https://github.com/jac459/meta  /tmp/metadriver-beta # Now pull beta-files
+   cp  -r  /tmp/metadriver-beta/* /steady/neeo-custom/.meta/node_modules/@jac459/meta
    sudo rm -rf /tmp/metadriver-beta
 
    popd >/dev/null 
@@ -878,7 +880,7 @@ function Do_Setup_PM2()
       return      
    fi 
 
-   cd /steady/neeo-custom/.meta/node_modules/@jac459/metadriver
+   cd /steady/neeo-custom/.meta/node_modules/@jac459/meta
    pm2 start --name meta meta.js  -o /tmp/meta-o -e /tmp/meta-e --  '{"Brain":"localhost","LogSeverity":"ERROR"}'
 
    
