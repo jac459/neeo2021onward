@@ -512,7 +512,7 @@ function Do_Install_Meta()
    fi
    echo "Stage $Exec_install_meta: Now that meta and all dependencies are installed, simply copy the beta meta-package in"
 
-   git clone  https://github.com/jac459/meta  /tmp/metadriver# Now pull beta-files
+   git clone  https://github.com/jac459/meta  /tmp/metadriver # Now pull beta-files
    cp  -r  /tmp/metadriver/* /steady/neeo-custom/.meta
    sudo rm -rf /tmp/metadriver
    cd .meta
