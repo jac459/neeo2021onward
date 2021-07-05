@@ -455,7 +455,7 @@ function Do_Remove_older_Beta()
 
    if [[  -e  ".broadlink"  ]]
       then 
-      sudo rmdir -R ".broadlink" 
+      sudo rm -r ".broadlink" 
    fi
 
    popd >/dev/null 
