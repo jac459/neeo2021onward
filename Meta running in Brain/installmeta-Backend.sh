@@ -455,7 +455,7 @@ function Do_Remove_older_Beta()
 
    if [[  -e  ".broadlink"  ]]
       then 
-      sudo rmdir -r ".broadlink" 
+      sudo rmdir -R ".broadlink" 
    fi
 
    popd >/dev/null 
@@ -893,7 +893,7 @@ function Do_Setup_PM2()
       GoOn=0
       return
    fi
-   pm2 start  -o /tmp/PythonManager-o -e /tmp/PythonManager-e  --name PythonManager python -- /steady/neeo-custom/.meta/node_modules/@jac459/metadriver/PythonManager.py
+   //pm2 start  -o /tmp/PythonManager-o -e /tmp/PythonManager-e  --name PythonManager python -- /steady/neeo-custom/.meta/node_modules/@jac459/metadriver/PythonManager.py
 
 
    popd >/dev/null
