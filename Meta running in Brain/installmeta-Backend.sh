@@ -484,7 +484,7 @@ function Do_Normal_Install_Meta()
    git clone https://github.com/jac459/meta /tmp/meta-install 
    cp -r /tmp/meta-install/* .
    rm -r /tmp/meta-install
-   nopm install 
+   npm install 
 
    if [ "$?" -ne 0 ]
        then
@@ -506,14 +506,17 @@ function Do_Install_Meta()
    pushd .  >/dev/null
    cd /steady/neeo-custom/ 
    if [[ ! -e  ".meta"  ]]   # meta  not yet installed, do a normal install first
-       then 
-      Do_Normal_Install_Meta
+       then
+       mkdir .meta 
+      //Do_Normal_Install_Meta
    fi
    echo "Stage $Exec_install_meta: Now that meta and all dependencies are installed, simply copy the beta meta-package in"
 
-   git clone  --branch Beta https://github.com/jac459/meta  /tmp/metadriver-beta # Now pull beta-files
-   cp  -r  /tmp/metadriver-beta/* /steady/neeo-custom/.meta/node_modules/@jac459/meta
-   sudo rm -rf /tmp/metadriver-beta
+   git clone  https://github.com/jac459/meta  /tmp/metadriver# Now pull beta-files
+   cp  -r  /tmp/metadriver/* /steady/neeo-custom/.meta
+   sudo rm -rf /tmp/metadriver
+   cd .meta
+   npm install
 
    popd >/dev/null 
 
@@ -880,7 +883,7 @@ function Do_Setup_PM2()
       return      
    fi 
 
-   cd /steady/neeo-custom/.meta/node_modules/@jac459/meta
+   cd /steady/neeo-custom/.meta
    pm2 start --name meta meta.js  -o /tmp/meta-o -e /tmp/meta-e --  '{"Brain":"localhost","LogSeverity":"ERROR"}'
 
    
