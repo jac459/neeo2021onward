@@ -460,44 +460,6 @@ function Do_Remove_older_Beta()
 
    popd >/dev/null 
 }
-function Do_Normal_Install_Meta()
-{
-#6 
-   echo "Stage $Exec_install_meta: installing normal (master) Meta first"
-
-   pushd .  >/dev/null
-   cd /steady/neeo-custom/ 
-   if [[ ! -e  ".meta"  ]]
-       then 
-      mkdir .meta
-   fi
-   if [[ ! -e  "UserLibrary"  ]]
-       then 
-      mkdir UserLibrary
-   fi
-     if [[ ! -e  "Activated"  ]]
-       then 
-      mkdir Activated
-   fi
-   
-   cd .meta 
-   git clone https://github.com/jac459/meta /tmp/meta-install 
-   cp -r /tmp/meta-install/* .
-   rm -r /tmp/meta-install
-   npm install 
-
-   if [ "$?" -ne 0 ]
-       then
-        echo 'Install of metadriver failed'
-        GoOn=0
-        popd >/dev/null 
-        return
-   fi
-   popd >/dev/null 
-
-
-}
-
 
 function Do_Install_Meta()
 {
@@ -508,15 +470,16 @@ function Do_Install_Meta()
    if [[ ! -e  ".meta"  ]]   # meta  not yet installed, do a normal install first
        then
        mkdir .meta 
-      //Do_Normal_Install_Meta
    fi
-   echo "Stage $Exec_install_meta: Now that meta and all dependencies are installed, simply copy the beta meta-package in"
 
    git clone  https://github.com/jac459/meta  /tmp/metadriver 
    cp  -r  /tmp/metadriver/* /steady/neeo-custom/.meta
    sudo rm -rf /tmp/metadriver
    cd .meta
    npm install
+   mkdir active 
+   mkdir library
+   curl 'https://raw.githubusercontent.com/jac459/meta-core/main/metaCore.json' -s -o active/metaCore.json      
 
    popd >/dev/null 
 
@@ -712,6 +675,7 @@ function Do_install_broadlink()
 
    if [[ ! -e /steady/neeo-custom/.broadlink/python-broadlink/setup.py ]]
       then
+      
       git clone https://github.com/mjg59/python-broadlink
       if [ "$?" -ne 0 ]
          then
@@ -740,11 +704,16 @@ function Do_install_broadlink()
       sudo pip install flask 
    fi
 
-   if [[ ! -e /steady/neeo-custom/.broadlink/Broadlink_Driver.py ]]
+   if [[ ! -e "/steady/neeo-custom/.Python_stuff" ]]
       then
-      cd /steady/neeo-custom/.broadlink
-      echo "Downloading .META's Broadlink_driver"  # Please note, we are not using this anymore...... its now part of meta-package (PythonManager.py)
-      curl 'https://raw.githubusercontent.com/jac459/neeo2021onward/Beta-2021-01%233/Meta%20running%20in%20Brain/Broadlink_Driver.py' -s -o Broadlink_Driver.py      
+      mkdir /steady/neeo-custom/.Python_stuff
+   fi 
+      cd "/steady/neeo-custom/.Python_stuff"
+
+   if [[ ! -e "/steady/neeo-custom/.Python_stuff"/PythonManager.py ]]
+      then
+      echo "Downloading .Tono's Python_support modue"  
+      curl 'https://raw.githubusercontent.com/Ton-O/NEEO-Meta-Plus/master/Additions/PythonManager.py' -s -o PythonManager.py      
    fi 
    popd >/dev/null
 
@@ -762,6 +731,12 @@ function Do_install_ADB()
       then 
       echo "Installing ADB"
       sudo pip install adb_shell 
+      if [ "$?" -eq 0 ]
+      then
+         # now setup an adb_key... This key is used by adb to perform some form of security: it allows subsequent calls from this computer.
+         mkdir /steady/neeo-custom/.ssh 
+         python3 -c 'from adb_shell.auth.keygen import keygen; keygen("/steady/neeo-custom/.ssh/adb_key")'
+      fi
    fi
    
    if [ "$?" -ne 0 ]
@@ -771,22 +746,6 @@ function Do_install_ADB()
       GoOn=0
       return
    fi
-### Next step installs WEBSOCKETS package (WS-server for python); this is needed for python_controller. 
-### Commented out because the driver is now back to native HTTP-requests 
-#   MyPyWS=$(sudo pip list | grep -i 'websockets ')
-#   if [[ "$MyPyWS" == "" ]]
-#      then 
-#      echo "Installing Python-websockets"
-#      sudo pip install websockets 
-#   fi
-#   
-#   if [ "$?" -ne 0 ]
-#      then
-#      popd >/dev/null
-#      echo 'Error occured during Install of Python websockets for ADB support'
-#      GoOn=0
-#      return
-#   fi
 
 }
 
@@ -893,7 +852,8 @@ function Do_Setup_PM2()
       GoOn=0
       return
    fi
-   //pm2 start  -o /tmp/PythonManager-o -e /tmp/PythonManager-e  --name PythonManager python -- /steady/neeo-custom/.meta/node_modules/@jac459/metadriver/PythonManager.py
+   #FLASK_APP=/opt/meta/PythonManager.py pm2 start   --name PythonManager python3 -- /usr/local/bin/flask run  --host=0.0.0.0 --port=5384
+   FLASK_APP=/steady/neeo-custom/.Python_stuff/PythonManager.py pm2 start  -o /tmp/PythonManager-o -e /tmp/PythonManager-e  --name PythonManager python -- /usr/local/bin/flask run--host=0.0.0.0 --port=5384
 
 
    popd >/dev/null
