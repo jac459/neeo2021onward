@@ -850,7 +850,7 @@ function Do_Setup_PM2()
       return
    fi
    #FLASK_APP=/opt/meta/PythonManager.py pm2 start   --name PythonManager python3 -- /usr/local/bin/flask run  --host=0.0.0.0 --port=5384
-   FLASK_APP=/steady/neeo-custom/.Python_stuff/PythonManager.py pm2 start  -o /tmp/PythonManager-o -e /tmp/PythonManager-e  --name PythonManager python -- /usr/local/bin/flask run--host=0.0.0.0 --port=5384
+   FLASK_APP=/steady/neeo-custom/.Python_stuff/PythonManager.py pm2 start  -o /tmp/PythonManager-o -e /tmp/PythonManager-e  --name PythonManager python -- /usr/bin/flask run--host=0.0.0.0 --port=5384
 
 
    popd >/dev/null
