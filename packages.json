@@ -11,7 +11,7 @@
         "PackageUSER": "",
         "mydep": [],
         "startcmd": []
-    },
+    }, 
     {
         "name": "nodejs",
         "type": 1,

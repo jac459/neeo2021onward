@@ -4,7 +4,7 @@ START FROM SCRATCH:
 
 This section describes how to get started with a Raspbian PI, fresh out of the box.
 Some steps may be optional for you when you;ve bought a Raspberry PI with and SDCard that already contains Raspbian OS (operating system).
-
+  
 1) Download Raspbian image and an appropriate installer from https://www.raspberrypi.org/software/ 
 2) Run the installer as described on https://www.raspberrypi.org/software/ and write the correct image to the SD-card. If you are asked for desktop or PI OS Lite, both are fine, but we suggest to use PI OS Lite.
 3) Before ejecting the SDCard from your computer, open a command promp (terminal under Linux), then create an empty file called ssh in the root of the partition named boot (on the SDCard).

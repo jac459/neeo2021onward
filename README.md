@@ -1,5 +1,5 @@
 ## neeo2021onward
-This repository contains installation material for .meta, the NEEO meta devicedriver.
+This repository contains installation material for .meta, the NEEO meta devicedriver. 
 
 ## It contains installation-scripts for creating an entire environment on:
 1) NEEO-Brain --- this version works with metadriver and is no longer maintained)

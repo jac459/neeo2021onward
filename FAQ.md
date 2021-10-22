@@ -2,7 +2,7 @@ FAQ.MD
 
 This README.MD file describes the work that has been done by the Telegram community "FindingNEEO" which has one global objective:
 Make certain that the original NEEO-remote is still useable after NEEO/C4 shuts down their cloud-infrastructure.
-
+ 
 # Key informations about the future of neeo
 ## Why is beginning of 2021 an important date for neeo users?
 ### Neeo and Control4

@@ -1,7 +1,7 @@
 INSTALLING META as Docker container image on X86-systems
 
 START FROM SCRATCH:
-
+ 
 This section describes how to get the meta docker-image on your docker server.
 It is assumed that you already have a working docker environment up and running with access to docker commands.
 
@@ -13,5 +13,4 @@ It is assumed that you already have a working docker environment up and running 
 
 
 That's it!
-
 You can also build an image yourself, just use the Dockerfile that is in this directory, and copy the scripts directory with it, as that's the start-script for everything
