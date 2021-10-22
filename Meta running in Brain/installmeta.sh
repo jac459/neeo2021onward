@@ -1,5 +1,5 @@
 #!/bin/bash
-# 
+#
 # Driver script for Meta Installer NEEO-Brain
 #
 GoOn=1                # the main loop controller

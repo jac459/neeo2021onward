@@ -5,7 +5,7 @@ That's why an installer script was created that takes a freshly installed Linux 
 and add the necessary packages to it automatically, so you can begin using/developing custom device drivers.
 The installer has been tested extensively on a Raspberry Pi, it is strongly advised to use that combination as well. 
 Therefore, we'll assume you will be using a Raspberry Pi, with a Raspbian image installed on it. That could be a minimal install (enough for NEEO) or a desktop version.
- 
+
 INSTALLATION:
 Installation is simple: (all commands have encling double-quotes (" ") surrounding them to show the complete command, do NOT type these double quotes when entering the command in Linux  
 - Make sure that you have access to a command line, either through "terminal on Raspbian Desktop" or ssh (Tip: add a file called ssh in the root of the boot-partition to enable SSH) 

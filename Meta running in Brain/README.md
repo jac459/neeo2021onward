@@ -1,5 +1,5 @@
 
-### Below are all the commands that need to run on your freshly rooted brain. 
+### Below are all the commands that need to run on your freshly rooted brain.
 
 ##Installation of metadriver (and prerequisites) on NEEO-Brain 
 login through ssh -i <key-ending with id_rsa> -l neeo

@@ -11,7 +11,7 @@ Done apt install Reading package lists...
 
 Looking for nodejs
 apt install -y nodejs 1>/home/pi/log/BackgroundAPTInstallnodejs.txt
-  
+
 WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
 
 Done apt install Reading package lists...

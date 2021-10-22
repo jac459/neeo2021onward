@@ -5,7 +5,7 @@ In essence, the script adds some repositories to apt that include "non-official 
 
 Although installer.py is purely meant to run on a freshly installed raspbian, we've noticed that many people try to run it on "more customised systems".
 For the installer (install.py) to work properly, you have to remove these packages and remove the "non-official repositories.
- 
+
 Please note: this procedure is tested, but without any warranty!!!!! 
    
 This is how you can get rid of the "non offical packages":

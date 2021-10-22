@@ -12,7 +12,7 @@ import time
 import argparse
 import json
 import inspect
-   
+
 InstalledCheckingVersion = 10
 InstalledAndOK = 0
 InstalledButNotOK = 90

@@ -1,5 +1,5 @@
 #!/bin/bash
-# 
+#
 # Meta Installer for NEEO-Brain
 #
 # This script runs as a kind of state-machine with the follwoing states:

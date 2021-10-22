@@ -5,7 +5,7 @@ This means that all traffic between meta, mosquitto and Node-RED will stay local
 
 Within this document, we'll be using two distinct type of "nodes" in here:
 
- 
+
 1) MQTT as the default communication-method with the Metadriver running on the NEEO Brain.
 2) Target-nodes which represent the equipment; this could be you TV, AVReceiver, but also a SONOS-device.
 We'll use <ip-address Brain> as the IP-address of your brain (don't type the < and > sign).

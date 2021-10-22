@@ -3,7 +3,7 @@ FROM arm32v7/python:2.7.13-jessie
 
 VOLUME /data
 #VOLUME /config
- 
+
 RUN apt update
 RUN apt install -y tzdata apt-utils
 RUN apt install -y net-tools
