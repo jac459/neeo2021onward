@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-import json
+import json 
 import broadlink
 import time
 import binascii
