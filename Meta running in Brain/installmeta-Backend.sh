@@ -15,7 +15,7 @@
 #  7; Installing mosquitto and nodered
 #  8; Adding users (mosquitto, changing profile for neeo-user to chmod /steady/neeo-custom/.pm2/pub.sock & /steady/neeo-custom/.pm2/rpc.sock to 777
 #  9; Setting up autopstart via PM2
-#  9; Signalling we have run seuccesfully  
+#  9; Signalling whave run seuccesfully  
 
 
 # First, define some variables used in here
@@ -850,7 +850,7 @@ function Do_Setup_PM2()
       return
    fi
    #FLASK_APP=/opt/meta/PythonManager.py pm2 start   --name PythonManager python3 -- /usr/local/bin/flask run  --host=0.0.0.0 --port=5384
-   FLASK_APP=/steady/neeo-custom/.Python_stuff/PythonManager.py pm2 start  -o /tmp/PythonManager-o -e /tmp/PythonManager-e  --name PythonManager python -- /usr/bin/flask run--host=0.0.0.0 --port=5384
+   FLASK_APP=/steady/neeo-custom/.Python_stuff/PythonManager.py pm2 start  -o /tmp/PythonManager-o -e /tmp/PythonManager-e  --name PythonManager python -- /usr/bin/flask run --host=0.0.0.0 --port=5384
 
 
    popd >/dev/null
